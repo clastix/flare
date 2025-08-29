@@ -1,0 +1,124 @@
+- apiGroups:
+    - ""
+  resources:
+    - namespaces
+    - secrets
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - services
+  verbs:
+    - create
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - advertisement.fluidos.eu
+  resources:
+    - peeringcandidates
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - apps
+  resources:
+    - deployments
+  verbs:
+    - create
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - authentication.k8s.io
+  resources:
+    - tokenreviews
+  verbs:
+    - create
+    - get
+    - list
+    - watch
+- apiGroups:
+    - batch
+  resources:
+    - jobs
+  verbs:
+    - create
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - capsule.clastix.io
+  resources:
+    - tenants
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - flare.clastix.io
+  resources:
+    - intents
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - flare.clastix.io
+  resources:
+    - intents/status
+  verbs:
+    - get
+    - update
+- apiGroups:
+    - networking.k8s.io
+  resources:
+    - ingresses
+  verbs:
+    - create
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - nodecore.fluidos.eu
+  resources:
+    - solvers
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - watch
+- apiGroups:
+    - offloading.liqo.io
+  resources:
+    - namespaceoffloadings
+  verbs:
+    - create
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - reservation.fluidos.eu
+  resources:
+    - contracts
+    - reservations
+  verbs:
+    - get
+    - list
+    - watch

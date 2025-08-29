@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "flare.fullname" . }}-operator
+  labels:
+    app.kubernetes.io/component: server
+    {{- include "flare.labels" . | nindent 4 }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.operator.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: operator
+      {{- include "flare.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: operator
+        {{- include "flare.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.operator.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "flare.serviceAccountName" . }}
+      containers:
+        - args:
+            - --enable-leader-election=true
+          env: [ ]
+          image: "{{ .Values.operator.image.repository }}:{{ .Values.operator.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
+          name: server
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          resources:
+          {{- toYaml .Values.operator.resources | nindent 12 }}
+          securityContext:
+          {{- toYaml .Values.operator.securityContext | nindent 12 }}
+      {{- with .Values.operator.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.operator.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

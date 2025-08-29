@@ -1,0 +1,897 @@
+openapi: 3.0.3
+info:
+  title: FLARE API
+  version: 1.0.0
+  description: |
+    Federated Liquid Resources Exchange (FLARE) API
+
+    For complete examples and detailed documentation, see FLARE_API_Reference.md
+    This is a template/memo for future OpenAPI implementation.
+  contact:
+    name: CLASTIX Labs
+    url: https://github.com/clastix
+servers:
+  - url: https://flare-api.example.com/api/v1
+    description: Production server
+paths:
+  /intents:
+    post:
+      summary: Submit a new workload intent
+      operationId: submitIntent
+      tags:
+        - Intents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntentSubmission'
+      responses:
+        '200':
+          description: Intent submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitIntentResponse'
+      security:
+        - BearerAuth: [ ]
+    get:
+      summary: List all intents for authenticated user
+      operationId: listIntents
+      tags:
+        - Intents
+      responses:
+        '200':
+          description: List of user intents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListIntentsResponse'
+      security:
+        - BearerAuth: [ ]
+  /intents/{intent_id}:
+    get:
+      summary: Get intent status
+      operationId: getIntentStatus
+      tags:
+        - Intents
+      parameters:
+        - name: intent_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Intent status response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntentStatus'
+      security:
+        - BearerAuth: [ ]
+    delete:
+      summary: Cancel intent
+      operationId: cancelIntent
+      tags:
+        - Intents
+      parameters:
+        - name: intent_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Intent canceled
+      security:
+        - BearerAuth: [ ]
+  /resources:
+    get:
+      summary: Get available GPU resources
+      operationId: getAvailableResources
+      tags:
+        - Resources
+      responses:
+        '200':
+          description: Available GPU resources
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailableResourcesResponse'
+      security:
+        - BearerAuth: [ ]
+  /auth/tokens:
+    post:
+      summary: Create API token
+      operationId: createToken
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTokenRequest'
+      responses:
+        '200':
+          description: Token created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTokenResponse'
+      security:
+        - BearerAuth: [ ]
+    get:
+      summary: List API tokens
+      operationId: listTokens
+      tags:
+        - Auth
+      responses:
+        '200':
+          description: Token list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTokensResponse'
+      security:
+        - BearerAuth: [ ]
+  /auth/tokens/{token_id}:
+    delete:
+      summary: Revoke API token
+      operationId: revokeToken
+      tags:
+        - Auth
+      parameters:
+        - name: token_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Token revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeTokenResponse'
+      security:
+        - BearerAuth: [ ]
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Token:
+      type: object
+      properties:
+        token_id:
+          type: string
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        last_used:
+          type: string
+          format: date-time
+        permissions:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+    VolumeSource:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [ s3, gcs, azure ]
+        uri:
+          type: string
+        credentials:
+          type: string
+    Volume:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: string
+        type:
+          type: string
+          enum: [ persistent, temporary ]
+        path:
+          type: string
+        source:
+          $ref: '#/components/schemas/VolumeSource'
+      required:
+        - name
+        - size
+        - type
+        - path
+    GPU:
+      type: object
+      properties:
+        model:
+          type: string
+          enum:
+            - nvidia-h100
+            - nvidia-a100
+            - nvidia-rtx-4090
+            - nvidia-rtx-4080
+            - nvidia-rtx-3090
+            - nvidia-v100
+            - nvidia-t4
+            - amd-mi300x
+            - amd-rx-7900xtx
+            - any
+        count:
+          type: integer
+          default: 1
+        memory_min:
+          type: string
+          description: Minimum GPU memory
+          example: 16Gi
+        memory_max:
+          type: string
+        cores_min:
+          type: integer
+        cores_max:
+          type: integer
+        clock_speed_min:
+          type: string
+        compute_capability:
+          type: string
+          enum:
+            - 9.0
+            - 8.6
+            - 8.0
+            - 7.5
+            - 7.0
+            - any
+        architecture:
+          type: string
+          enum:
+            - hopper
+            - ada-lovelace
+            - ampere
+            - turing
+            - volta
+            - cdna3
+            - rdna3
+            - any
+        tier:
+          type: string
+          enum:
+            - premium
+            - standard
+            - gaming
+            - inference
+            - budget
+            - any
+        shared:
+          type: boolean
+          default: false
+        interconnect:
+          type: string
+        interruptible:
+          type: boolean
+          default: false
+        multi_instance:
+          type: boolean
+          default: false
+        dedicated:
+          type: boolean
+          default: false
+        fp32_tflops:
+          type: number
+          description: "Performance requirement (e.g.: 19.5, 83.0)"
+          minimum: 0
+        topology:
+          type: string
+          description: Multi-GPU topology
+          enum:
+            - all-to-all
+            - nvswitch
+            - ring
+            - mesh
+        multi_gpu_efficiency:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: "Multi-GPU efficiency score (e.g.: 0.95, 0.85)"
+    MaintenanceWindow:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+          description: Start time of maintenance window (ISO 8601)
+        end:
+          type: string
+          format: date-time
+          description: End time of maintenance window (ISO 8601)
+        frequency:
+          type: string
+          enum: [ weekly, monthly ]
+          default: weekly
+          description: Frequency of maintenance window
+      required:
+        - start
+        - end
+    FirewallRule:
+      type: object
+      properties:
+        port:
+          type: integer
+        protocol:
+          type: string
+        source:
+          type: string
+        action:
+          type: string
+          enum:
+            - allow
+            - deny
+      required:
+        - port
+        - protocol
+        - source
+        - action
+    Energy:
+      type: object
+      properties:
+        max_carbon_footprint:
+          type: string
+          description: Max CO2 per hour (e.g., "50g CO2/h")
+        renewable_energy_only:
+          type: boolean
+          default: false
+          description: Require renewable energy sources
+        energy_efficiency_rating:
+          type: string
+          description: Minimum efficiency rating (A-F)
+        power_usage_effectiveness:
+          description: Max PUE for data centers
+          type: number
+          format: float
+          default: 2.0
+        green_certified_only:
+          description: Require green certifications
+          type: boolean
+          default: false
+    Security:
+      type: object
+      properties:
+        network_isolation:
+          type: string
+          enum:
+            - public
+            - private
+          default: public
+        firewall_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/FirewallRule'
+        vpn_access:
+          type: boolean
+          default: false
+          description: Require VPN access
+        bastion_host:
+          type: boolean
+          default: false
+          description: Require bastion host
+        intrusion_detection:
+          type: boolean
+          default: false
+          description: Enable IDS/IPS
+        vulnerability_scanning:
+          type: boolean
+          default: false
+          description: Enable vulnerability scans
+    Performance:
+      type: object
+      properties:
+        min_network_bandwidth:
+          type: string
+          description: Min bandwidth (e.g., "10Gbps")
+        max_jitter_ms:
+          type: integer
+          default: 50
+          description: Max network jitter
+        min_uptime_percent:
+          type: number
+          format: float
+          default: 99.0
+          description: "Minimum uptime guarantee (default: 99.0)"
+        max_cold_start_time:
+          type: string
+          format: go-duration
+          description: Max startup time (e.g., "30s")
+        gpu_utilization_target:
+          type: number
+          format: float
+          default: 0.80
+          description: Target GPU utilization
+        memory_utilization_target:
+          type: number
+          format: float
+          default: 0.80
+          description: Target memory utilization
+    Compliance:
+      type: object
+      properties:
+        data_residency:
+          type: array
+          items:
+            type: string
+            enum:
+              - EU
+          description: Required data locations (e.g., ["EU"])
+        certifications:
+          type: array
+          items:
+            type: string
+            enum:
+              - ISO27001
+              - SOC2
+          description: Required certifications (ISO27001, SOC2)
+        encryption_at_rest:
+          type: boolean
+          default: false
+          description: Require data encryption
+        encryption_in_transit:
+          type: boolean
+          default: false
+          description: Require transit encryption
+        audit_logging:
+          type: boolean
+          default: false
+          description: Require audit logs
+        gdpr_compliant:
+          type: boolean
+          default: false
+          description: GDPR compliance required
+        hipaa_compliant:
+          type: boolean
+          default: false
+          description: HIPAA compliance required
+    Intent:
+      type: object
+      properties:
+        objective:
+          type: string
+          enum:
+            - Performance_Maximization
+            - Cost_Minimization
+            - Latency_Minimization
+            - Energy_Efficiency
+            - Balanced_Optimization
+        workload:
+          $ref: '#/components/schemas/Workload'
+        constraints:
+          $ref: '#/components/schemas/Constraints'
+        sla:
+          $ref: '#/components/schemas/SLARequirements'
+      required:
+        - objective
+        - workload
+    ErrorSuggestion:
+      type: object
+      properties:
+        alternative:
+          type: string
+        cost_difference:
+          type: string
+        performance_impact:
+          type: string
+    Error:
+      type: object
+      properties:
+        status:
+          type: integer
+          description: Status error code
+        error_code:
+          type: string
+          description: Expanded status code
+          enum:
+            - INVALID_FORMAT
+            - MISSING_REQUIRED_FIELD
+            - INSUFFICIENT_RESOURCES
+            - GPU_MODEL_UNAVAILABLE
+            - GPU_MEMORY_INSUFFICIENT
+            - GPU_COUNT_INSUFFICIENT
+            - COST_LIMIT_EXCEEDED
+            - QUOTA_EXCEEDED
+            - INVALID_TOKEN
+            - INSUFFICIENT_PERMISSIONS
+            - TOKEN_EXPIRED
+            - TOKEN_REVOKED
+            - AUTHENTICATION_FAILED
+            - REGION_UNAVAILABLE
+        message:
+          type: string
+          description: Human readable error message
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorSuggestion'
+    IntentSubmission:
+      type: object
+      properties:
+        intent:
+          $ref: '#/components/schemas/Intent'
+    SubmitIntentResponse:
+      type: object
+      properties:
+        intent_id:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
+        estimated_cost:
+          type: string
+        estimated_start_time:
+          type: string
+          format: date-time
+    IntentStatus:
+      type: object
+      properties:
+        intent_id:
+          type: string
+        status:
+          type: string
+        workload_url:
+          type: string
+        current_cost:
+          type: string
+        runtime:
+          type: string
+        gpu_utilization:
+          type: string
+        message:
+          type: string
+    AvailableResourcesResponse:
+      type: object
+      properties:
+        available_gpus:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailableGPU'
+    CreateTokenRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        expires_in:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        user_id:
+          type: string
+    CreateTokenResponse:
+      type: object
+      properties:
+        token_id:
+          type: string
+        token:
+          type: string
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        permissions:
+          type: array
+          items:
+            type: string
+    ListTokensResponse:
+      type: object
+      properties:
+        tokens:
+          type: array
+          items:
+            $ref: '#/components/schemas/Token'
+    ListIntentsResponse:
+      type: object
+      properties:
+        tokens:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntentStatus'
+    RevokeTokenResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        token_id:
+          type: string
+        revoked_at:
+          type: string
+          format: date-time
+    Batch:
+      type: object
+      properties:
+        parallel_tasks:
+          type: integer
+          default: 1
+          minimum: 1
+        max_retries:
+          type: integer
+          default: 3
+          minimum: 0
+        timeout:
+          type: string
+          format: go-duration
+        completion_policy:
+          type: string
+          format: duration
+          enum: [ All, Any ]
+    Scaling:
+      type: object
+      properties:
+        min_replicas:
+          type: integer
+          default: 1
+        max_replicas:
+          type: integer
+          default: 10
+        auto_scale:
+          type: boolean
+          default: false
+        target_cpu_percent:
+          type: integer
+          default: 70
+        target_gpu_percent:
+          type: integer
+          default: 80
+    Secret:
+      type: object
+      properties:
+        name:
+          type: string
+        env:
+          type: string
+      required:
+        - name
+        - env
+    Storage:
+      type: object
+      properties:
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Volume'
+    Negotiation:
+      type: object
+      properties:
+        max_negotiation_rounds:
+          type: integer
+          default: 3
+        price_flexibility:
+          type: number
+          format: float
+          default: 0.15
+        resource_flexibility:
+          type: number
+          format: float
+          default: 0.10
+        timeout_seconds:
+          type: integer
+          default: 300
+        fallback_strategy:
+          type: string
+          default: queue
+        auto_accept_threshold:
+          type: number
+          format: float
+          default: 0.05
+    Availability:
+      type: object
+      required:
+        - window_start
+        - window_end
+        - timezone
+        - days_of_week
+        - maintenance_windows
+      properties:
+        window_start:
+          type: string
+          description: Availability window start (e.g., "09:00")
+        window_end:
+          type: string
+          description: Availability window end (e.g., "17:00")
+        timezone:
+          type: string
+          description: Timezone (e.g., "Europe/Berlin")
+        days_of_week:
+          type: array
+          items:
+            type: string
+            enum:
+              - Mon
+              - Tue
+              - Wed
+              - Thu
+              - Fri
+              - Sat
+              - Sun
+          description: Days available (e.g., ["Mon", "Tue"])
+        blackout_dates:
+          type: array
+          items:
+            type: string
+            format: date
+          description: Unavailable dates (ISO 8601)
+        maintenance_windows:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaintenanceWindow'
+    AvailableGPU:
+      type: object
+      properties:
+        model:
+          type: string
+        count:
+          type: integer
+        memory:
+          type: string
+        location:
+          type: string
+        cost_per_hour:
+          type: string
+        provider:
+          type: string
+    Port:
+      type: object
+      properties:
+        port:
+          type: integer
+        protocol:
+          type: string
+          enum:
+            - TCP
+            - UDP
+          default: TCP
+        expose:
+          type: boolean
+        domain:
+          type: string
+      required:
+        - port
+    Resources:
+      type: object
+      properties:
+        cpu:
+          type: string
+        memory:
+          type: string
+        gpu:
+          $ref: '#/components/schemas/GPU'
+    SLARequirements:
+      type: object
+      properties:
+        availability:
+          type: string
+          description: Uptime requirement (e.g., "99.9%")
+          default: "99.0%"
+        max_interruption_time:
+          type: string
+          description: Maximum acceptable downtime (e.g., "5m")
+        backup_strategy:
+          type: string
+          description: Data backup approach
+          default: none
+    Constraints:
+      type: object
+      properties:
+        max_hourly_cost:
+          type: string
+          description: Max cost per hour (e.g., "10 EUR")
+        max_total_cost:
+          type: string
+          description: Max total cost for jobs
+        location:
+          type: string
+          description: Geographic preference
+        availability_zone:
+          type: string
+          description: Specific zone
+        max_latency_ms:
+          type: integer
+          default: 100
+          description: Max network latency in milliseconds
+          minimum: 0
+        deadline:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp for deadline
+        preemptible:
+          type: boolean
+          default: false
+          description: Allow spot instances
+        providers:
+          type: array
+          items:
+            type: string
+            enum:
+              - AWS
+              - GCP
+          description: Preferred providers
+        availability:
+          $ref: '#/components/schemas/Availability'
+        negotiation:
+          $ref: '#/components/schemas/Negotiation'
+        energy:
+          $ref: '#/components/schemas/Energy'
+        compliance:
+          $ref: '#/components/schemas/Compliance'
+        performance:
+          $ref: '#/components/schemas/Performance'
+        security:
+          $ref: '#/components/schemas/Security'
+    Workload:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [ service, batch ]
+        name:
+          type: string
+        image:
+          type: string
+        commands:
+          type: array
+          items:
+            type: string
+        env:
+          type: array
+          items:
+            type: string
+            example:
+              - KEY=value
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/Port'
+        resources:
+          $ref: '#/components/schemas/Resources'
+        deployment_strategy:
+          type: string
+          enum:
+            - colocated
+            - distributed
+            - flexibile
+        communication_pattern:
+          type: string
+          enum:
+            - all-reduce
+            - pipeline
+            - independent
+        storage:
+          $ref: '#/components/schemas/Storage'
+        secrets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Secret'
+        scaling:
+          $ref: '#/components/schemas/Scaling'
+        batch:
+          $ref: '#/components/schemas/Batch'
+      required:
+        - type
+        - name
+        - image
+        - resources
