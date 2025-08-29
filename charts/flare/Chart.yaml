@@ -1,0 +1,16 @@
+apiVersion: v2
+appVersion: latest
+description: FLARE (Federated Liquid Resources Exchange) is a GPU pooling platform designed to manage computational resources like GPUs, NPUs, and FPGAs for AI and HPC applications.
+home: https://github.com/clastix/flare
+maintainers:
+  - email: dario@tranchitella.eu
+    name: Dario Tranchitella
+    url: https://clastix.io
+  - email: me@bsctl.io
+    name: Adriano Pezzuto
+    url: https://clastix.io
+name: flare
+sources:
+  - https://github.com/clastix/flare
+type: application
+version: 1.0.0

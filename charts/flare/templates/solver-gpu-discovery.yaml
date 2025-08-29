@@ -1,0 +1,12 @@
+apiVersion: nodecore.fluidos.eu/v1alpha1
+kind: Solver
+metadata:
+  name: gpu-discovery
+  namespace: fluidos
+spec:
+  establishPeering: false
+  findCandidate: true
+  intentID: gpu-discovery
+  reserveAndBuy: false
+  selector:
+    flavorType: K8Slice

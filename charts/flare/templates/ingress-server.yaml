@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "flare.fullname" . }}-server
+  labels:
+    app.kubernetes.io/component: server
+    {{- include "flare.labels" . | nindent 4 }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  rules:
+    - host: flare.io
+      http:
+        paths:
+          - backend:
+              service:
+                name: {{ include "flare.fullname" . }}-server
+                port:
+                  name: http
+            path: /
+            pathType: Prefix

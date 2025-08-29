@@ -1,0 +1,547 @@
+group: flare.clastix.io
+names:
+  kind: Intent
+  listKind: IntentList
+  plural: intents
+  singular: intent
+scope: Namespaced
+versions:
+  - additionalPrinterColumns:
+      - description: Time since creation
+        jsonPath: .metadata.creationTimestamp
+        name: Age
+        type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Intent is the Schema for the intents API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              contraints:
+                properties:
+                  availability:
+                    properties:
+                      blackoutDates:
+                        items:
+                          pattern: ^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$
+                          type: string
+                        type: array
+                      daysOfWeek:
+                        items:
+                          enum:
+                            - Mon
+                            - Tue
+                            - Wed
+                            - Thu
+                            - Fri
+                            - Sat
+                            - Sun
+                          type: string
+                        type: array
+                      maintenanceWindows:
+                        items:
+                          properties:
+                            end:
+                              pattern: ^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$
+                              type: string
+                            frequency:
+                              default: Weekly
+                              enum:
+                                - Weekly
+                                - Monthly
+                              type: string
+                            start:
+                              pattern: ^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$
+                              type: string
+                          required:
+                            - end
+                            - frequency
+                            - start
+                          type: object
+                        type: array
+                      timezone:
+                        type: string
+                      windowEnd:
+                        pattern: ^(?:[01]\d|2[0-3]):[0-5]\d$
+                        type: string
+                      windowStart:
+                        pattern: ^(?:[01]\d|2[0-3]):[0-5]\d$
+                        type: string
+                    type: object
+                  availabilityZone:
+                    type: string
+                  compliance:
+                    properties:
+                      auditLogging:
+                        type: boolean
+                      certifications:
+                        items:
+                          enum:
+                            - ISO27001
+                            - SOC2
+                          type: string
+                        type: array
+                      dataResidency:
+                        items:
+                          type: string
+                        type: array
+                      encryptionAtRest:
+                        type: boolean
+                      encryptionInTransit:
+                        type: boolean
+                      gdprCompliant:
+                        type: boolean
+                      hippaCompliant:
+                        type: boolean
+                    type: object
+                  deadline:
+                    format: date-time
+                    type: string
+                  energy:
+                    properties:
+                      energyEfficiencyRating:
+                        type: string
+                      greenCertifiedOnly:
+                        type: boolean
+                      maxCarbonFootprint:
+                        type: string
+                      powerUsageEffectiveness:
+                        default: 2
+                        type: number
+                      renewableEnergyOnly:
+                        type: boolean
+                    type: object
+                  location:
+                    type: string
+                  maxHourlyCost:
+                    type: number
+                  maxLatencyMs:
+                    default: 100
+                    format: int64
+                    type: integer
+                  maxTotalCost:
+                    type: number
+                  negotiation:
+                    properties:
+                      autoAcceptThreshold:
+                        default: 0.05
+                        type: number
+                      fallbackStrategy:
+                        default: queue
+                        type: string
+                      maxNegotiationRounds:
+                        default: 3
+                        type: integer
+                      priceFlexibility:
+                        default: 0.15
+                        type: number
+                      resourceFlexibility:
+                        default: 0.3
+                        type: number
+                      timeoutSeconds:
+                        default: 300
+                        format: int64
+                        type: integer
+                    type: object
+                  performance:
+                    properties:
+                      gpuUtilizationTarget:
+                        default: 0.8
+                        type: number
+                      maxColdStartTime:
+                        type: string
+                      maxJitterMs:
+                        default: 50
+                        format: int64
+                        type: integer
+                      memoryUtilizationTarget:
+                        default: 0.8
+                        type: number
+                      minNetworkBandwidth:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      minUptimePercent:
+                        default: 99
+                        type: number
+                    type: object
+                  preEmptible:
+                    type: boolean
+                  providers:
+                    items:
+                      type: string
+                    type: array
+                  security:
+                    properties:
+                      bastionHost:
+                        type: boolean
+                      firewallRules:
+                        items:
+                          properties:
+                            action:
+                              enum:
+                                - Allow
+                                - Deny
+                              type: string
+                            port:
+                              format: int32
+                              type: integer
+                            protocol:
+                              type: string
+                            source:
+                              type: string
+                          required:
+                            - action
+                            - port
+                            - protocol
+                            - source
+                          type: object
+                        type: array
+                      intrusionDetection:
+                        type: boolean
+                      networkIsolation:
+                        default: Public
+                        enum:
+                          - Public
+                          - Private
+                        type: string
+                      vpnAccess:
+                        type: boolean
+                      vulnerabilityScanning:
+                        type: boolean
+                    type: object
+                type: object
+              objective:
+                type: string
+              sla:
+                properties:
+                  availability:
+                    type: string
+                  backupStrategy:
+                    type: string
+                  maxInterruptionTime:
+                    type: string
+                type: object
+              workload:
+                properties:
+                  batch:
+                    properties:
+                      completionPolicy:
+                        enum:
+                          - All
+                          - Any
+                        type: string
+                      maxRetries:
+                        default: 3
+                        type: integer
+                      parallelTasks:
+                        default: 1
+                        minimum: 1
+                        type: integer
+                      timeout:
+                        default: 1h
+                        type: string
+                    type: object
+                  commands:
+                    items:
+                      type: string
+                    type: array
+                  communicationPattern:
+                    enum:
+                      - AllReduce
+                      - Independent
+                      - Pipeline
+                    type: string
+                  deploymentStrategy:
+                    enum:
+                      - Colocated
+                      - Distributed
+                      - Flexible
+                    type: string
+                  env:
+                    items:
+                      pattern: ^[A-Z_][A-Z0-9_]*=[^\s]+$
+                      type: string
+                    type: array
+                  image:
+                    type: string
+                  name:
+                    type: string
+                  ports:
+                    items:
+                      properties:
+                        domain:
+                          type: string
+                        expose:
+                          type: boolean
+                        port:
+                          format: int32
+                          type: integer
+                        protocol:
+                          default: TCP
+                          enum:
+                            - TCP
+                            - UDP
+                          type: string
+                      required:
+                        - port
+                      type: object
+                    type: array
+                  resources:
+                    properties:
+                      cpu:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      gpu:
+                        properties:
+                          architecture:
+                            default: Any
+                            type: string
+                          clockSpeedMin:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          computeCapability:
+                            default: Any
+                            type: string
+                          coresMax:
+                            format: int64
+                            type: integer
+                          coresMin:
+                            format: int64
+                            type: integer
+                          count:
+                            default: 1
+                            format: int64
+                            type: integer
+                          dedicated:
+                            type: boolean
+                          fp32TFlops:
+                            type: number
+                          interconnect:
+                            type: string
+                          interruptible:
+                            type: boolean
+                          memoryMax:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          memoryMin:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          model:
+                            default: Any
+                            type: string
+                          multiGPUEfficiency:
+                            type: number
+                          multiInstance:
+                            type: boolean
+                          shared:
+                            type: boolean
+                          tier:
+                            default: Any
+                            type: string
+                          topology:
+                            enum:
+                              - AllToAll
+                              - NvSwitch
+                              - Ring
+                              - Mesh
+                            type: string
+                        required:
+                          - count
+                        type: object
+                      memory:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                    required:
+                      - cpu
+                      - gpu
+                      - memory
+                    type: object
+                  scaling:
+                    properties:
+                      autoScale:
+                        type: boolean
+                      maxReplicas:
+                        default: 10
+                        type: integer
+                      minReplicas:
+                        default: 1
+                        type: integer
+                      targetCPUPercent:
+                        default: 70
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                      targetGPUPercent:
+                        default: 80
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                    type: object
+                  secrets:
+                    items:
+                      properties:
+                        env:
+                          description: Env is the environment variable the Secret will be injected in the workload.
+                          type: string
+                        name:
+                          description: Name is the Secret name.
+                          type: string
+                      required:
+                        - env
+                        - name
+                      type: object
+                    type: array
+                  storage:
+                    properties:
+                      volumes:
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            path:
+                              type: string
+                            size:
+                              anyOf:
+                                - type: integer
+                                - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            source:
+                              properties:
+                                credentials:
+                                  type: string
+                                type:
+                                  enum:
+                                    - S3
+                                    - GCS
+                                    - Azure
+                                  type: string
+                                uri:
+                                  type: string
+                              type: object
+                            type:
+                              enum:
+                                - Persistent
+                                - Temporary
+                              type: string
+                          required:
+                            - name
+                            - path
+                            - size
+                            - type
+                          type: object
+                        type: array
+                    type: object
+                  type:
+                    enum:
+                      - Service
+                      - Batch
+                    type: string
+                required:
+                  - image
+                  - name
+                  - type
+                type: object
+            required:
+              - objective
+              - workload
+            type: object
+          status:
+            properties:
+              conditions:
+                items:
+                  description: Condition contains details for one aspect of the current state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                        - "True"
+                        - "False"
+                        - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                    - lastTransitionTime
+                    - message
+                    - reason
+                    - status
+                    - type
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
