@@ -8,9 +8,9 @@ This document provides the API specification for FLARE (Federated Liquid Resourc
 
 The FLARE API Gateway exposes three main resources:
 
-- **Intents** (`/api/v1/intents`) - Submit and manage GPU workloads
-- **Resources** (`/api/v1/resources`) - Query available GPU resources
-- **Tokens** (`/api/v1/auth/tokens`) - Manage API authentication
+- **Intents** (`/intents`) - Submit and manage GPU workloads
+- **Resources** (`/resources`) - Query available GPU resources
+- **Tokens** (`/auth/tokens`) - Manage API authentication
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ The FLARE API Gateway exposes three main resources:
 3. [API Endpoints](#api-endpoints)
 4. [Complete Examples](#complete-examples)
 5. [Response Formats](#response-formats)
-6. [Error Codes](#error-codes)
+6. [Error Handling](#error-handling)
 
 ## Workload Intent Schema
 
@@ -27,7 +27,7 @@ The FLARE API Gateway exposes three main resources:
 
 ```json
 {
-  "intent": {                         // required
+  "intent": {
     "objective": "<optimization_objective>",  // required
     "workload": {                     // required
       // Workload specification
@@ -47,14 +47,15 @@ The FLARE API Gateway exposes three main resources:
 The `objective` field specifies the primary optimization goal for FLARE resource allocation:
 
 ```json
-"objective": "Cost_Minimization" | "Performance_Maximization" | "Latency_Minimization" | "Balanced_Optimization"
+"objective": "Performance_Maximization" | "Cost_Minimization" | "Latency_Minimization" | "Energy_Efficiency" | "Balanced_Optimization"
 ```
 
 **Available Objectives:**
 
-- **`"Cost_Minimization"`** - Prioritize lowest cost resources, accept longer startup times and potentially lower performance
 - **`"Performance_Maximization"`** - Prioritize highest performance GPUs regardless of cost
+- **`"Cost_Minimization"`** - Prioritize lowest cost resources, accept longer startup times and potentially lower performance  
 - **`"Latency_Minimization"`** - Optimize for lowest network latency and fastest startup times
+- **`"Energy_Efficiency"`** - Prioritize renewable energy sources and minimize carbon footprint, may accept higher costs for greener infrastructure
 - **`"Balanced_Optimization"`** - Balance cost, performance, and latency factors
 
 ### Workload Specification
@@ -63,7 +64,7 @@ The `objective` field specifies the primary optimization goal for FLARE resource
 
 ```json
 "workload": {
-  "type": "service" | "job" | "batch",  // required
+  "type": "service" | "batch",  // required
   "name": "string",              // required - Unique workload identifier
   "image": "string",             // required - Docker image
   "commands": ["string"],        // optional - Container startup commands
@@ -88,11 +89,13 @@ The `objective` field specifies the primary optimization goal for FLARE resource
       "env": "ENV_VAR_NAME"      // required
     }
   ],
+  "deployment_strategy": "string", // optional - Resource deployment strategy ("colocated", "distributed", "flexibile")
+  "communication_pattern": "string", // optional - Inter-process communication pattern ("all-reduce", "pipeline", "independent")
   "scaling": {                   // optional - Auto-scaling (services only)
     // See Scaling section
   },
-  "job": {                       // optional - Job-specific settings
-    // See Job Settings section
+  "batch": {                     // optional - Batch-specific settings
+    // See Batch section
   }
 }
 ```
@@ -106,9 +109,11 @@ The `objective` field specifies the primary optimization goal for FLARE resource
   "gpu": {                      // optional - GPU requirements
     "model": "string",          // optional - GPU model preference (e.g., "nvidia-h100", "nvidia-a100", "amd-mi300x", "any")
     "count": 1,                 // optional - Number of GPUs (default: 1)
-    "memory": "string",         // optional - GPU memory requirement (e.g., "16Gi", "80Gi")
-    "cores": 1024,              // optional - CUDA cores requirement
-    "clock_speed": "string",    // optional - GPU frequency requirement (e.g., "1.5G", "2.0G")
+    "memory_min": "string",     // optional - Minimum GPU memory requirement (e.g., "16Gi", "80Gi")
+    "memory_max": "string",     // optional - Maximum GPU memory requirement (e.g., "80Gi", "128Gi")
+    "cores_min": 1024,          // optional - Minimum CUDA cores requirement
+    "cores_max": 2048,          // optional - Maximum CUDA cores requirement
+    "clock_speed_min": "string", // optional - Minimum GPU frequency requirement (e.g., "1.5G", "2.0G")
     "compute_capability": "string", // optional - CUDA compute capability (e.g., "8.0", "9.0")
     "architecture": "string",   // optional - GPU architecture (e.g., "hopper", "ampere")
     "tier": "string",           // optional - GPU tier preference
@@ -117,9 +122,9 @@ The `objective` field specifies the primary optimization goal for FLARE resource
     "interruptible": false,     // optional - Allow spot/preemptible instances (default: false)
     "multi_instance": false,    // optional - Support MIG (Multi-Instance GPU) (default: false)
     "dedicated": false,         // optional - Require dedicated GPU (default: false)
-    "fp32_tflops": "string",    // optional - Performance requirement (e.g., "19.5", "83.0")
+    "fp32_tflops": 19.5,        // optional - Performance requirement (e.g., 19.5, 83.0)
     "topology": "string",       // optional - Multi-GPU topology ("all-to-all", "nvswitch", "ring", "mesh")
-    "multi_gpu_efficiency": "string" // optional - Multi-GPU efficiency score (e.g., "0.95", "0.85")
+    "multi_gpu_efficiency": 0.95 // optional - Multi-GPU efficiency score (e.g., 0.95, 0.85)
   }
 }
 ```
@@ -215,123 +220,156 @@ The `objective` field specifies the primary optimization goal for FLARE resource
 }
 ```
 
-#### Job Settings
+#### Batch Configuration
 
 ```json
-"job": {
-  "parallel_tasks": 1,          // optional - Number of parallel instances (default: 1)
-  "max_retries": 3,             // optional - Retry attempts on failure (default: 3)
-  "timeout": "string",          // optional - Max execution time (e.g., "2h", "30m")
-  "completion_policy": "All" | "Any"  // optional - Success criteria (default: "All")
+"batch": {
+  "parallel_tasks": 1,              // optional - Number of parallel instances (default: 1)
+  "max_retries": 3,                 // optional - Retry attempts on failure (default: 3)
+  "timeout": "2h",                  // optional - Max execution time (e.g., "2h", "30m")
+  "completion_policy": "All"        // optional - Success criteria: "All" or "Any" (default: "All")
 }
 ```
 
 ### Constraints
 
-#### Currency Support
-**Current Status**: EUR only  
-**Format**: `"<amount> EUR"` (e.g., "10 EUR")  
-**Rate Format**: `"<amount> EUR/hour"` (e.g., "0.45 EUR/hour")
+The `constraints` section allows you to specify deployment requirements, limits, and preferences for your workload.
+
+#### Basic Constraints
 
 ```json
 "constraints": {
-  "max_hourly_cost": "string",     // optional - Max cost per hour (e.g., "10 EUR")
-  "max_total_cost": "string",      // optional - Max total cost for jobs
-  "location": "string",            // optional - Geographic preference
-  "availability_zone": "string",   // optional - Specific zone
-  "max_latency_ms": 100,           // optional - Max network latency (default: 100)
-  "deadline": "string",            // optional - ISO 8601 timestamp
-  "preemptible": true,             // optional - Allow spot instances (default: false)
-  "providers": ["string"],         // optional - Preferred providers
-  "availability": {                // optional - Provider availability requirements
-    "window_start": "string",            // optional - Availability window start (e.g., "09:00")
-    "window_end": "string",              // optional - Availability window end (e.g., "17:00")
-    "timezone": "string",                // optional - Timezone (e.g., "Europe/Berlin")
-    "days_of_week": ["string"],          // optional - Days available (e.g., ["Mon", "Tue"])
-    "blackout_dates": ["string"],        // optional - Unavailable dates (ISO 8601)
-    "maintenance_windows": [             // optional - Scheduled maintenance
-      {
-        "start": "string",               // required - Start time (ISO 8601)
-        "end": "string",                 // required - End time (ISO 8601)
-        "frequency": "weekly"            // optional - Frequency (weekly, monthly) (default: "weekly")
-      }
-    ]
-  },
-  "negotiation": {                 // optional - Real-time negotiation parameters (FUTURE IMPROVEMENT)
-    "max_negotiation_rounds": 3,         // optional - Max rounds of resource negotiation (default: 3)
-    "price_flexibility": 0.15,          // optional - Price flexibility percentage (default: 0.15)
-    "resource_flexibility": 0.10,       // optional - Resource substitution flexibility (default: 0.10)
-    "timeout_seconds": 300,             // optional - Negotiation timeout (default: 300)
-    "fallback_strategy": "queue",       // optional - Fallback if negotiation fails (default: "queue")
-    "auto_accept_threshold": 0.05       // optional - Auto-accept if within threshold (default: 0.05)
-    // NOTE: Advanced negotiation features require FLUIDOS enhancements for auction-based resource allocation
-  },
-  "energy": {                      // optional - Energy efficiency constraints
-    "max_carbon_footprint": "string",   // optional - Max CO2 per hour (e.g., "50g CO2/h")
-    "renewable_energy_only": false,     // optional - Require renewable energy sources (default: false)
-    "energy_efficiency_rating": "A",    // optional - Minimum efficiency rating (A-F)
-    "power_usage_effectiveness": 1.4,   // optional - Max PUE for data centers (default: 2.0)
-    "green_certified_only": false       // optional - Require green certifications (default: false)
-  },
-  "compliance": {                  // optional - Regulatory and compliance requirements
-    "data_residency": ["string"],       // optional - Required data locations (e.g., ["EU"])
-    "certifications": ["string"],       // optional - Required certifications (ISO27001, SOC2)
-    "encryption_at_rest": true,         // optional - Require data encryption (default: false)
-    "encryption_in_transit": true,      // optional - Require transit encryption (default: false)
-    "audit_logging": true,              // optional - Require audit logs (default: false)
-    "gdpr_compliant": true,             // optional - GDPR compliance required (default: false)
-    "hipaa_compliant": false            // optional - HIPAA compliance required (default: false)
-  },
-  "performance": {                 // optional - Performance guarantees
-    "min_network_bandwidth": "string",  // optional - Min bandwidth (e.g., "10Gbps")
-    "max_jitter_ms": 10,                // optional - Max network jitter (default: 50)
-    "min_uptime_percent": 99.9,         // optional - Minimum uptime guarantee (default: 99.0)
-    "max_cold_start_time": "string",    // optional - Max startup time (e.g., "30s")
-    "min_uptime_percent": 99.9         // optional - Minimum uptime guarantee (default: 99.0)
-  },
-  "security": {                    // optional - Security requirements
-    "network_isolation": "private",     // optional - Network isolation level (default: "public")
-    "firewall_rules": [                 // optional - Custom firewall rules
-      {
-        "port": 22,                     // required - Port number
-        "protocol": "TCP",              // required - Protocol
-        "source": "10.0.0.0/8",        // required - Source CIDR
-        "action": "allow"               // required - Action (allow/deny)
-      }
-    ],
-    "vpn_access": false,                // optional - Require VPN access (default: false)
-    "bastion_host": false,              // optional - Require bastion host (default: false)
-    "intrusion_detection": true,       // optional - Enable IDS/IPS (default: false)
-    "vulnerability_scanning": true     // optional - Enable vulnerability scans (default: false)
-  }
+  "max_hourly_cost": "10 EUR",         // optional - Max cost per hour 
+  "max_total_cost": "100 EUR",         // optional - Max total cost for batch workloads
+  "location": "EU",                    // optional - Geographic preference
+  "availability_zone": "eu-west-1a",   // optional - Specific availability zone
+  "max_latency_ms": 100,               // optional - Max network latency (default: 100)
+  "deadline": "2024-12-31T23:59:59Z",  // optional - ISO 8601 deadline timestamp
+  "preemptible": false,                // optional - Allow spot instances (default: false)
+  "providers": ["AWS", "GCP"]          // optional - Preferred cloud providers
 }
 ```
 
-#### Location Options
+#### Provider Availability Requirements
 
+```json
+"availability": {
+  "window_start": "09:00",             // required - Daily availability start (HH:MM)
+  "window_end": "17:00",               // required - Daily availability end (HH:MM)
+  "timezone": "Europe/Berlin",         // required - Timezone identifier
+  "days_of_week": ["Mon", "Tue", "Wed", "Thu", "Fri"], // required - Available days
+  "blackout_dates": ["2024-12-25", "2024-01-01"],      // optional - Unavailable dates (ISO 8601)
+  "maintenance_windows": [             // required - Scheduled maintenance windows
+    {
+      "start": "2024-01-15T02:00:00Z", // required - Maintenance start (ISO 8601)
+      "end": "2024-01-15T04:00:00Z",   // required - Maintenance end (ISO 8601)
+      "frequency": "weekly"            // optional - Frequency (default: "weekly")
+    }
+  ]
+}
+```
+
+#### Energy Efficiency Constraints
+
+```json
+"energy": {
+  "max_carbon_footprint": "50g CO2/h", // optional - Max CO2 emissions per hour
+  "renewable_energy_only": false,      // optional - Require renewable sources (default: false)
+  "energy_efficiency_rating": "A",     // optional - Min efficiency rating (A-F)
+  "power_usage_effectiveness": 2.0,    // optional - Max PUE for data centers (default: 2.0)
+  "green_certified_only": false        // optional - Require green certifications (default: false)
+}
+```
+
+#### Security Requirements
+
+```json
+"security": {
+  "network_isolation": "public",       // optional - Network isolation level (default: "public")
+  "firewall_rules": [                  // optional - Custom firewall rules
+    {
+      "port": 22,                      // required - Port number
+      "protocol": "TCP",               // required - Protocol (TCP/UDP)
+      "source": "10.0.0.0/8",         // required - Source CIDR block
+      "action": "allow"                // required - Action (allow/deny)
+    }
+  ],
+  "vpn_access": false,                 // optional - Require VPN access (default: false)
+  "bastion_host": false,               // optional - Require bastion host (default: false)
+  "intrusion_detection": false,        // optional - Enable IDS/IPS (default: false)
+  "vulnerability_scanning": false      // optional - Enable vulnerability scans (default: false)
+}
+```
+
+#### Performance Guarantees
+
+```json
+"performance": {
+  "min_network_bandwidth": "10Gbps",   // optional - Min network bandwidth
+  "max_jitter_ms": 50,                 // optional - Max network jitter (default: 50)
+  "min_uptime_percent": 99.0,          // optional - Min uptime guarantee (default: 99.0)
+  "max_cold_start_time": "30s",        // optional - Max startup time
+  "gpu_utilization_target": 0.80,      // optional - Target GPU utilization (default: 0.80)
+  "memory_utilization_target": 0.80    // optional - Target memory utilization (default: 0.80)
+}
+```
+
+#### Compliance Requirements
+
+```json
+"compliance": {
+  "data_residency": ["EU"],            // optional - Required data locations
+  "certifications": ["ISO27001", "SOC2"], // optional - Required certifications
+  "encryption_at_rest": false,         // optional - Require data encryption (default: false)
+  "encryption_in_transit": false,      // optional - Require transit encryption (default: false)
+  "audit_logging": false,              // optional - Require audit logs (default: false)
+  "gdpr_compliant": false,             // optional - GDPR compliance required (default: false)
+  "hipaa_compliant": false             // optional - HIPAA compliance required (default: false)
+}
+```
+
+#### Resource Negotiation (Advanced)
+
+```json
+"negotiation": {
+  "max_negotiation_rounds": 3,         // optional - Max negotiation rounds (default: 3)
+  "price_flexibility": 0.15,           // optional - Price flexibility % (default: 0.15)
+  "resource_flexibility": 0.10,        // optional - Resource flexibility % (default: 0.10)
+  "timeout_seconds": 300,              // optional - Negotiation timeout (default: 300)
+  "fallback_strategy": "queue",        // optional - Fallback strategy (default: "queue")
+  "auto_accept_threshold": 0.05        // optional - Auto-accept threshold (default: 0.05)
+}
+```
+
+#### Constraint Options Reference
+
+**Location Options:**
 - `EU` - European Union
-- `US` - United States
+- `US` - United States  
 - `Asia` - Asia Pacific
-- `Canada` - Canada
-- `Australia` - Australia
-- `Brazil` - Brazil
-- `India` - India
-- `Japan` - Japan
-- `Singapore` - Singapore
+- `Canada`, `Australia`, `Brazil`, `India`, `Japan`, `Singapore`
 - `any` - Any location
 
-#### Fallback Strategies
+**Provider Options:**
+- `AWS` - Amazon Web Services
+- `GCP` - Google Cloud Platform
 
-- `queue` - Queue request until resources available
-- `lower_tier` - Accept lower-tier GPU if available
-- `shared` - Accept shared GPU resources
-- `spot` - Accept spot/preemptible instances
-- `fail` - Fail immediately if requirements not met
-
-#### Network Isolation Levels
-
+**Network Isolation Levels:**
 - `public` - Public internet access
 - `private` - Private network only
+
+**Fallback Strategies:**
+- `queue` - Queue until resources available
+- `lower_tier` - Accept lower-tier GPU
+- `shared` - Accept shared resources
+- `spot` - Accept spot/preemptible instances
+
+**Energy Efficiency Ratings:**
+- `A` (highest) through `F` (lowest)
+
+**Compliance Certifications:**
+- `ISO27001` - Information security standard
+- `SOC2` - Service Organization Control 2
 
 ### SLA (Service Level Agreement)
 
@@ -339,7 +377,7 @@ The `objective` field specifies the primary optimization goal for FLARE resource
 "sla": {
   "availability": "string",           // optional - Uptime requirement (e.g., "99.9%") (default: "99.0%")
   "max_interruption_time": "string", // optional - Max acceptable downtime (e.g., "5m")
-  "backup_strategy": "string"         // optional - Data backup approach (default: "none")
+  "backup_strategy": "string"         // optional - Data backup approach (default: none)
 }
 ```
 
@@ -360,25 +398,134 @@ Authorization: Bearer <your-api-token>
 2. **Include Token**: Add the `Authorization: Bearer <token>` header to all requests
 3. **Token Validation**: Tokens are validated on each request
 
-### Error Responses
+## Error Handling
 
-**401 Unauthorized** - Missing or invalid token:
+### Error Response Format
+
+All FLARE API errors follow a consistent response format with HTTP status codes, error codes, messages, and actionable suggestions.
 
 ```json
 {
-  "error": "unauthorized",
-  "message": "Invalid or missing API token",
-  "code": "INVALID_TOKEN"
+  "status": 400,
+  "error_code": "GPU_MODEL_UNAVAILABLE",
+  "message": "The requested GPU model 'nvidia-h200' is not available",
+  "suggestions": [
+    {
+      "alternative": "nvidia-h100",
+      "cost_difference": "+15%",
+      "performance_impact": "-5%"
+    },
+    {
+      "alternative": "nvidia-a100",
+      "cost_difference": "-30%", 
+      "performance_impact": "-20%"
+    }
+  ]
 }
 ```
 
-**403 Forbidden** - Valid token but insufficient permissions:
+### Error Codes Reference
+
+#### Request Format Errors (400 Bad Request)
+
+- **`INVALID_FORMAT`** - Request JSON is malformed or invalid
+- **`MISSING_REQUIRED_FIELD`** - Required field missing from request body
+
+#### Resource Availability Errors (409 Conflict)
+
+- **`INSUFFICIENT_RESOURCES`** - Not enough resources available to fulfill request
+- **`GPU_MODEL_UNAVAILABLE`** - Requested GPU model not available 
+- **`GPU_MEMORY_INSUFFICIENT`** - Available GPUs don't meet memory requirements
+- **`GPU_COUNT_INSUFFICIENT`** - Not enough GPUs available for requested count
+- **`REGION_UNAVAILABLE`** - Requested location/region not available
+
+#### Cost and Quota Errors (402 Payment Required / 429 Too Many Requests)
+
+- **`COST_LIMIT_EXCEEDED`** - Request exceeds specified cost limits
+- **`QUOTA_EXCEEDED`** - User has exceeded resource quotas
+
+#### Authentication Errors (401 Unauthorized)
+
+- **`INVALID_TOKEN`** - API token is invalid or malformed
+- **`TOKEN_EXPIRED`** - API token has expired
+- **`TOKEN_REVOKED`** - API token has been revoked
+- **`AUTHENTICATION_FAILED`** - Authentication credentials are incorrect
+
+#### Authorization Errors (403 Forbidden)
+
+- **`INSUFFICIENT_PERMISSIONS`** - User lacks permissions for this operation
+
+### Error Examples
+
+#### GPU Model Unavailable
 
 ```json
 {
-  "error": "forbidden", 
-  "message": "Insufficient permissions for this operation",
-  "code": "INSUFFICIENT_PERMISSIONS"
+  "status": 409,
+  "error_code": "GPU_MODEL_UNAVAILABLE", 
+  "message": "The requested GPU model 'nvidia-h200' is not currently available",
+  "suggestions": [
+    {
+      "alternative": "nvidia-h100",
+      "cost_difference": "+10%",
+      "performance_impact": "-8%"
+    }
+  ]
+}
+```
+
+#### Cost Limit Exceeded
+
+```json
+{
+  "status": 402,
+  "error_code": "COST_LIMIT_EXCEEDED",
+  "message": "Estimated cost $45.50/hour exceeds limit of $20.00/hour",
+  "suggestions": [
+    {
+      "alternative": "nvidia-rtx-4090 (2 GPUs)",
+      "cost_difference": "-60%",
+      "performance_impact": "-25%"
+    },
+    {
+      "alternative": "Enable preemptible instances", 
+      "cost_difference": "-70%",
+      "performance_impact": "May be interrupted"
+    }
+  ]
+}
+```
+
+#### Invalid Authentication
+
+```json
+{
+  "status": 401,
+  "error_code": "TOKEN_EXPIRED",
+  "message": "API token expired on 2024-01-15T10:30:00Z",
+  "suggestions": []
+}
+```
+
+#### Resource Quota Exceeded
+
+```json
+{
+  "status": 429,
+  "error_code": "QUOTA_EXCEEDED", 
+  "message": "GPU quota exceeded: using 8/8 allocated GPUs",
+  "suggestions": [
+    {
+      "alternative": "Wait for existing workloads to complete",
+      "cost_difference": "Free",
+      "performance_impact": "Delayed execution"
+    },
+    {
+      "alternative": "Request quota increase",
+      "cost_difference": "Contact support",
+      "performance_impact": "None"
+    }
+  ]
 }
 ```
 
@@ -386,7 +533,7 @@ Authorization: Bearer <your-api-token>
 
 ### Submit Workload Intent
 
-**POST** `/api/v1/intents`
+**POST** `/intents`
 
 Submit a new workload intent for execution.
 
@@ -411,7 +558,7 @@ Submit a new workload intent for execution.
 
 ### Get Intent Status
 
-**GET** `/api/v1/intents/{intent_id}`
+**GET** `/intents/{intent_id}`
 
 Retrieve the current status of a submitted intent.
 
@@ -435,7 +582,7 @@ Retrieve the current status of a submitted intent.
 
 ### List User Intents
 
-**GET** `/api/v1/intents`
+**GET** `/intents`
 
 List all intents for the authenticated user.
 
@@ -445,7 +592,7 @@ List all intents for the authenticated user.
 
 ### Cancel Intent
 
-**DELETE** `/api/v1/intents/{intent_id}`
+**DELETE** `/intents/{intent_id}`
 
 Cancel a running or pending intent.
 
@@ -455,7 +602,7 @@ Cancel a running or pending intent.
 
 ### Get Available Resources
 
-**GET** `/api/v1/resources`
+**GET** `/resources`
 
 Query available GPU resources across the federation.
 
@@ -484,7 +631,7 @@ Query available GPU resources across the federation.
 
 #### Create API Token
 
-**POST** `/api/v1/auth/tokens`
+**POST** `/auth/tokens`
 
 Create a new API token for FLARE API Gateway authentication.
 
@@ -519,7 +666,7 @@ Create a new API token for FLARE API Gateway authentication.
 
 #### List API Tokens
 
-**GET** `/api/v1/auth/tokens`
+**GET** `/auth/tokens`
 
 List all API tokens for the authenticated user.
 
@@ -547,7 +694,7 @@ List all API tokens for the authenticated user.
 
 #### Revoke API Token
 
-**DELETE** `/api/v1/auth/tokens/{token_id}`
+**DELETE** `/auth/tokens/{token_id}`
 
 Revoke an API token.
 
@@ -557,7 +704,7 @@ Revoke an API token.
 
 #### Verify Token
 
-**GET** `/api/v1/auth/verify`
+**GET** `/auth/verify`
 
 Verify that a token is valid and check user information.
 
@@ -604,7 +751,7 @@ Available permissions for API tokens:
 First, create an API token:
 
 ```bash
-curl -X POST https://flare-api.example.com/api/v1/auth/tokens \
+curl -X POST https://flare-api.example.com/auth/tokens \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <admin-token>" \
   -d '{
@@ -630,7 +777,7 @@ Response:
 Use the token for subsequent requests:
 
 ```bash
-curl -X GET https://flare-api.example.com/api/v1/resources \
+curl -X GET https://flare-api.example.com/resources \
   -H "Authorization: Bearer flr_1234567890abcdef"
 ```
 
@@ -639,7 +786,7 @@ curl -X GET https://flare-api.example.com/api/v1/resources \
 **Request:**
 
 ```bash
-curl -X POST https://flare-api.example.com/api/v1/intents \
+curl -X POST https://flare-api.example.com/intents \
   -H "Authorization: Bearer flr_1234567890abcdef" \
   -H "Content-Type: application/json" \
   -d @intent.json
@@ -676,7 +823,7 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
         "gpu": {
           "model": "nvidia-h100",
           "count": 2,
-          "memory": "80Gi",
+          "memory_min": "80Gi",
           "tier": "premium"
         }
       },
@@ -794,7 +941,7 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
   "intent": {
     "objective": "Performance_Maximization",
     "workload": {
-      "type": "job",
+      "type": "batch",
       "name": "llama-distributed-training",
       "image": "pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel",
       "commands": [
@@ -812,7 +959,7 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
         "gpu": {
           "model": "nvidia-a100",
           "count": 4,
-          "memory": "40Gi",
+          "memory_min": "40Gi",
           "interconnect": "nvlink",
           "tier": "premium"
         }
@@ -1001,7 +1148,7 @@ This example demonstrates how FLARE optimizes for both cost and communication pe
   "intent": {
     "objective": "Balanced_Optimization",
     "workload": {
-      "type": "job",
+      "type": "batch",
       "name": "gpt-7b-distributed-training",
       "image": "nvcr.io/nvidia/pytorch:24.01-py3",
       "commands": [
@@ -1017,7 +1164,7 @@ This example demonstrates how FLARE optimizes for both cost and communication pe
         "memory": "256Gi",
         "gpu": {
           "count": 4,
-          "memory": "40Gi",
+          "memory_min": "40Gi",
           "model": "nvidia-a100",
           "interconnect": "nvlink"
         }
@@ -1077,19 +1224,11 @@ This example demonstrates how FLARE optimizes for both cost and communication pe
 
 ```json
 {
-  "status": "success",
   "intent_id": "intent-abc123",
+  "status": "success", 
   "message": "Intent submitted successfully",
-  "data": {
-    "estimated_cost": "8.50 EUR/hour",
-    "estimated_start_time": "2024-01-15T10:35:00Z",
-    "selected_provider": "provider-2",
-    "gpu_allocation": {
-      "model": "nvidia-h100",
-      "count": 2,
-      "location": "eu-west-1"
-    }
-  }
+  "estimated_cost": "8.50 EUR/hour",
+  "estimated_start_time": "2024-01-15T10:35:00Z"
 }
 ```
 
@@ -1116,51 +1255,12 @@ This example demonstrates how FLARE optimizes for both cost and communication pe
 {
   "intent_id": "intent-abc123",
   "status": "running",
-  "workload": {
-    "name": "deepseek-r1-inference",
-    "type": "service",
-    "url": "https://deepseek-api.mycompany.com",
-    "start_time": "2024-01-15T10:35:00Z",
-    "runtime": "2h 15m"
-  },
-  "resources": {
-    "provider": "provider-2",
-    "location": "eu-west-1",
-    "gpu": {
-      "model": "nvidia-h100",
-      "count": 2,
-      "utilization": "85%"
-    }
-  },
-  "costs": {
-    "hourly_rate": "8.50 EUR/hour",
-    "total_cost": "19.12 EUR",
-    "currency": "EUR"
-  },
-  "performance": {
-    "latency_p50": "45ms",
-    "latency_p99": "120ms",
-    "throughput": "150 req/s"
-  }
+  "workload_url": "https://deepseek-api.mycompany.com",
+  "current_cost": "19.12 EUR", 
+  "runtime": "2h 15m",
+  "gpu_utilization": "85%",
+  "message": "Workload running successfully"
 }
 ```
 
-## Error Codes
-
-| Code | Description | Action |
-|------|-------------|---------|
-| `INVALID_FORMAT` | JSON format error | Fix JSON syntax |
-| `MISSING_REQUIRED_FIELD` | Required field missing | Add missing field |
-| `INSUFFICIENT_RESOURCES` | No matching resources | Adjust requirements or wait |
-| `GPU_MODEL_UNAVAILABLE` | Requested GPU model not found | Try alternative models or wait for availability |
-| `GPU_MEMORY_INSUFFICIENT` | Available GPUs have less memory than required | Reduce memory requirements or try different regions |
-| `GPU_COUNT_INSUFFICIENT` | Not enough GPUs available for multi-GPU request | Reduce GPU count or try distributed deployment |
-| `COST_LIMIT_EXCEEDED` | Estimated cost too high | Increase budget or reduce resources |
-| `QUOTA_EXCEEDED` | User quota exceeded | Contact support or wait |
-| `INVALID_TOKEN` | Invalid or missing API token | Check Authorization header |
-| `INSUFFICIENT_PERMISSIONS` | Token lacks required permissions | Request elevated permissions |
-| `TOKEN_EXPIRED` | API token has expired | Generate new token |
-| `TOKEN_REVOKED` | API token has been revoked | Generate new token |
-| `AUTHENTICATION_FAILED` | Authentication failed | Check token format |
-| `REGION_UNAVAILABLE` | Requested region not available | Choose different region |
 
