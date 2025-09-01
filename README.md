@@ -158,13 +158,14 @@
 
 ### Project Documentation
 
-#### [Final Project Review](docs/FLARE_placeholder.md)
-- [Executive Summary](docs/FLARE_placeholder.md#executive-summary)
-- [Project Timeline and Deliverables](docs/FLARE_placeholder.md#project-timeline-and-deliverables)
-- [Results Achieved Against KPIs and Milestones](docs/FLARE_placeholder.md#results-achieved-against-kpis-and-milestones)
-- [Difficulties and Challenges Faced](docs/FLARE_placeholder.md#difficulties-and-challenges-faced)
+#### [Final Project Review](docs/FLARE_Final_Project_Review.md)
+- [Executive Summary](docs/FLARE_Final_Project_Review.md#executive-summary)
+- [Project Timeline and Deliverables](docs/FLARE_Final_Project_Review.md#project-timeline-and-deliverables)
+- [Results Achieved Against KPIs and Milestones](docs/FLARE_Final_Project_Review.md#results-achieved-against-kpis-and-milestones)
+- [Technical Innovations and Architecture](docs/FLARE_Final_Project_Review.md#technical-innovations-and-architecture)
+- [Project Scope and Validation Challenges](docs/FLARE_Final_Project_Review.md#project-scope-and-validation-challenges)
 - [How FLUIDOS Succeeded and Benefited FLARE](docs/FLARE_placeholder.md#how-fluidos-succeeded-and-benefited-flare)
-- [Project Conclusion and Assessment](docs/FLARE_placeholder.md#project-conclusion-and-assessment)
+- [Project Conclusion and Assessment](docs/FLARE_Final_Project_Review.md#project-conclusion-and-assessment)
 
 
 ## Licensing
