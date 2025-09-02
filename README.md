@@ -155,6 +155,7 @@
 - [Batch Processing](docs/FLARE_Sample_Use_Cases.md#7-batch-processing)
 - [Multi-Tenant Resources](docs/FLARE_Sample_Use_Cases.md#8-multi-tenant-resources)
 - [Distributed Workloads](docs/FLARE_Sample_Use_Cases.md#9-distributed-workloads)
+- [Cost Optimization Scenarios](docs/FLARE_Sample_Use_Cases.md#10-cost-optimization-scenarios)
 
 ### Project Documentation
 
@@ -163,8 +164,7 @@
 - [Project Timeline and Deliverables](docs/FLARE_Final_Project_Review.md#project-timeline-and-deliverables)
 - [Results Achieved Against KPIs and Milestones](docs/FLARE_Final_Project_Review.md#results-achieved-against-kpis-and-milestones)
 - [Technical Innovations and Architecture](docs/FLARE_Final_Project_Review.md#technical-innovations-and-architecture)
-- [Project Scope and Validation Challenges](docs/FLARE_Final_Project_Review.md#project-scope-and-validation-challenges)
-- [How FLUIDOS Succeeded and Benefited FLARE](docs/FLARE_placeholder.md#how-fluidos-succeeded-and-benefited-flare)
+- [Project Challenges and Technical Solutions](docs/FLARE_Final_Project_Review.md#project-challenges-and-technical-solutions)
 - [Project Conclusion and Assessment](docs/FLARE_Final_Project_Review.md#project-conclusion-and-assessment)
 
 

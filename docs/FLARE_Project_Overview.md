@@ -19,11 +19,12 @@
 7. [User Guide](#user-guide)
 8. [Admin Guide](#admin-guide)
 9. [Use Cases and Applications](#use-cases-and-applications)
-10. [Results](#results)
+10. [Cost Optimization Scenarios](#cost-optimization-scenarios)
+11. [Results](#results)
     - [Architecture and Integration Success](#architecture-and-integration-success)
     - [Efficient GPUs Placement](#efficient-gpus-placement)
     - [Technical Excellence Achieved](#technical-excellence-achieved)
-11. [Additional Resources](#additional-resources)
+12. [Additional Resources](#additional-resources)
 
 ## Executive Summary
 

@@ -13,6 +13,7 @@ This document provides comprehensive use case scenarios demonstrating FLARE's GP
 7. [Batch Processing](#7-batch-processing)
 8. [Multi-Tenant Resources](#8-multi-tenant-resources)
 9. [Distributed Workloads](#9-distributed-workloads)
+10. [Cost Optimization Scenarios](#10-cost-optimization-scenarios)
 
 
 ## 1. AI Inference Service
@@ -37,7 +38,7 @@ User submits natural language intent to FLARE:
 
 ```bash
 # User submits intent via FLARE API
-curl -X POST https://flare-api.example.com/api/v1/intents \
+curl -X POST https://flare-api.example.com/intents \
   -H "Authorization: Bearer $USER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -51,19 +52,29 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
           "--model-id=meta-llama/Llama-2-7b-chat-hf",
           "--max-batch-size=16"
         ],
+        "env": [
+          "HF_TOKEN=${HUGGINGFACE_TOKEN}",
+          "MAX_BATCH_SIZE=16"
+        ],
         "ports": [
           {
             "port": 8080,
             "expose": true
           }
         ],
+        "scaling": {
+          "min_replicas": 1,
+          "max_replicas": 3,
+          "auto_scale": true,
+          "target_gpu_percent": 80
+        },
         "resources": {
           "cpu": "8",
           "memory": "32Gi",
           "gpu": {
             "model": "nvidia-t4",
             "count": 1,
-            "memory": "16Gi"
+            "memory_min": "16Gi"
           }
         }
       },
@@ -78,16 +89,19 @@ Response
 
 ```json
 {
+  "request_id": "req-intent-001",
   "intent_id": "intent-llama2-2024-01-15-001",
   "status": "pending",
-  "estimated_cost": "0.45-0.65 EUR/hour",
-  "eta_seconds": 300
+  "estimated_cost": "0.55",
+  "currency": "EUR",
+  "billing_period": "hourly",
+  "estimated_start_time": "2024-01-15T14:35:00Z"
 }
 ```
 
 #### 2. FLARE Intent Processing (Automated)
 
-FLARE automatically translates the user intent into technical specifications and creates a GPU-aware Solver:
+FLARE automatically translates the user intent into technical specifications for GPU resource discovery:
 
 ```yaml
 metadata:
@@ -116,11 +130,11 @@ spec:
   establishPeering: true
 ```
 
-#### 3. GPU Discovery and Filtering (FLUIDOS Enhanced)
+#### 3. GPU Discovery and Filtering
 
-FLUIDOS automatically discovers and filters GPU resources based on Solver requirements:
+FLARE automatically discovers and filters GPU resources:
 
-**What FLUIDOS does automatically**:
+**What FLARE does automatically**:
 
 1. **GPU Flavor discovery across clusters** - Scans all federated providers
 2. **Native GPU filtering** - Applies GPU memory and cost filters
@@ -142,15 +156,15 @@ FLUIDOS automatically selects the first available PeeringCandidate and creates a
 - In this case: RTX 4080 (€0.45/hour) is selected
 - No performance evaluation - just availability
 
-#### 5. Remote Peering and Allocation (Liqo)
+#### 5. Remote Resource Allocation
 
-FLUIDOS triggers Liqo to establish peering and create virtual node:
+FLARE establishes connection to the selected provider and provisions resources:
 
 **What happens automatically**:
 
-1. FLUIDOS creates Allocation resource
-2. Liqo establishes secure tunnel to provider
-3. Virtual node appears in consumer cluster
+1. FLARE creates resource allocation
+2. FLARE establishes secure connection to provider
+3. GPU resources become available for workload deployment
 
 #### 6. Workload Deployment (FLARE)
 
@@ -169,7 +183,7 @@ FLARE automatically generates and deploys the workload:
 {
   "intent_id": "intent-llama2-2024-01-15-001",
   "status": "completed",
-  "endpoint": "https://llama2-api.flare.example.com",
+  "workload_url": "https://llama2-api.flare.example.com",
   "actual_cost": "0.45 EUR/hour",
   "gpu": "RTX 4080 (16Gi)",
   "location": "Germany",
@@ -199,14 +213,14 @@ User submits high-level training intent to FLARE:
 
 ```bash
 # User submits training intent via FLARE API
-curl -X POST https://flare-api.example.com/api/v1/intents \
+curl -X POST https://flare-api.example.com/intents \
   -H "Authorization: Bearer $USER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "intent": {
       "objective": "Performance_Maximization",
       "workload": {
-        "type": "job",
+        "type": "batch",
         "name": "bert-large-training",
         "image": "pytorch/pytorch:2.0.1-cuda11.7-cudnn8-devel",
         "commands": [
@@ -220,9 +234,17 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
           "gpu": {
             "model": "nvidia-rtx-4090",
             "count": 8,
-            "memory": "24Gi",
+            "memory_min": "24Gi",
             "interconnect": "nvlink"
           }
+        },
+        "deployment_strategy": "colocated",
+        "communication_pattern": "all-reduce",
+        "batch": {
+          "parallel_tasks": 2,
+          "max_retries": 3,
+          "timeout": "12h",
+          "completion_policy": "All"
         },
         "storage": {
           "volumes": [
@@ -247,16 +269,17 @@ Response
 
 ```json
 {
+  "request_id": "req-intent-002",
   "intent_id": "intent-ai-training-2024-01-15-001",
   "status": "pending",
   "estimated_completion_time": "3.5 hours",
-  "eta_seconds": 600
+  "estimated_start_time": "2024-01-15T14:40:00Z"
 }
 ```
 
 #### 2. FLARE Intent Processing (Automated)
 
-FLARE automatically translates the user intent into technical specifications and creates a GPU-aware Solver:
+FLARE automatically translates the user intent into technical specifications for GPU resource discovery:
 
 ```yaml
 metadata:
@@ -289,11 +312,11 @@ spec:
   establishPeering: true
 ```
 
-#### 3. GPU Discovery and Filtering (FLUIDOS Enhanced)
+#### 3. GPU Discovery and Filtering
 
-FLUIDOS automatically discovers and filters multi-GPU resources based on Solver requirements:
+FLARE automatically discovers and filters multi-GPU resources:
 
-**What FLUIDOS does automatically**:
+**What FLARE does automatically**:
 
 1. **Multi-GPU Flavor discovery** - Scans all federated providers for high-performance configurations
 2. **Native interconnect filtering** - Applies NVLink requirements for optimal distributed training
@@ -316,15 +339,15 @@ FLUIDOS automatically selects the first available PeeringCandidate and creates a
 - In this case: RTX 4090 8x24Gi (€4.50/hour) is selected
 - Performance optimization prioritizes multi-GPU configurations
 
-#### 5. Remote Peering and Allocation (Liqo)
+#### 5. Remote Resource Allocation
 
-FLUIDOS triggers Liqo to establish peering and create virtual node:
+FLARE establishes connection to the selected provider and provisions resources:
 
 **What happens automatically**:
 
-1. FLUIDOS creates Allocation resource for multi-GPU training configuration
-2. Liqo establishes secure tunnel to provider
-3. Virtual node appears in consumer cluster with training capabilities
+1. FLARE creates resource allocation for multi-GPU training configuration
+2. FLARE establishes secure connection to provider
+3. GPU resources become available for workload deployment with training capabilities
 
 #### 6. Workload Deployment (FLARE)
 
@@ -343,7 +366,7 @@ FLARE automatically generates and deploys the distributed training workload:
 {
   "intent_id": "intent-ai-training-2024-01-15-001",
   "status": "running",
-  "progress": "45%",
+  "gpu_utilization": "45%",
   "estimated_completion": "2.1 hours remaining",
   "gpu": "RTX 4090 8x24Gi NVLink",
   "location": "France",
@@ -376,14 +399,14 @@ User submits memory-efficient fine-tuning intent to FLARE:
 
 ```bash
 # User submits fine-tuning intent via FLARE API
-curl -X POST https://flare-api.example.com/api/v1/intents \
+curl -X POST https://flare-api.example.com/intents \
   -H "Authorization: Bearer $USER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "intent": {
       "objective": "Cost_Minimization",
       "workload": {
-        "type": "job",
+        "type": "batch",
         "name": "llama7b-lora-finetuning",
         "image": "huggingface/transformers-pytorch-gpu:4.22.0",
         "commands": [
@@ -393,14 +416,24 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
           "--method=lora", "--lora_rank=16",
           "--epochs=3", "--batch_size=4"
         ],
+        "env": [
+          "WANDB_PROJECT=llama2-finetuning",
+          "CUDA_VISIBLE_DEVICES=0"
+        ],
         "resources": {
           "cpu": "16",
           "memory": "64Gi",
           "gpu": {
             "model": "nvidia-rtx-4080",
             "count": 1,
-            "memory": "12Gi"
+            "memory_min": "12Gi"
           }
+        },
+        "batch": {
+          "parallel_tasks": 1,
+          "max_retries": 3,
+          "timeout": "6h",
+          "completion_policy": "All"
         },
         "storage": {
           "volumes": [
@@ -428,13 +461,13 @@ Response
   "intent_id": "intent-finetuning-2024-01-15-001",
   "status": "pending",
   "estimated_completion_time": "5.2 hours",
-  "eta_seconds": 300
+  "estimated_start_time": "2024-01-15T14:35:00Z"
 }
 ```
 
 #### 2. FLARE Intent Processing (Automated)
 
-FLARE automatically translates the user intent into technical specifications and creates a GPU-aware Solver:
+FLARE automatically translates the user intent into technical specifications for GPU resource discovery:
 
 ```yaml
 metadata:
@@ -464,11 +497,11 @@ spec:
   establishPeering: true
 ```
 
-#### 3. GPU Discovery and Filtering (FLUIDOS Enhanced)
+#### 3. GPU Discovery and Filtering
 
-FLUIDOS automatically discovers and filters GPU resources based on Solver requirements:
+FLARE automatically discovers and filters GPU resources:
 
-**What FLUIDOS does automatically**:
+**What FLARE does automatically**:
 
 1. **Memory-optimized Flavor discovery** - Scans all federated providers for fine-tuning configurations
 2. **Native GPU filtering** - Applies memory requirements for LoRA fine-tuning
@@ -491,15 +524,15 @@ FLUIDOS automatically selects the first available PeeringCandidate and creates a
 - In this case: RTX 4080 Mobile (€0.14/hour) is selected
 - Cost optimization prioritizes most affordable option
 
-#### 5. Remote Peering and Allocation (Liqo)
+#### 5. Remote Resource Allocation
 
-FLUIDOS triggers Liqo to establish peering and create virtual node:
+FLARE establishes connection to the selected provider and provisions resources:
 
 **What happens automatically**:
 
-1. FLUIDOS creates Allocation resource for memory-optimized configuration
-2. Liqo establishes secure tunnel to provider
-3. Virtual node appears in consumer cluster with fine-tuning capabilities
+1. FLARE creates resource allocation for memory-optimized configuration
+2. FLARE establishes secure connection to provider
+3. GPU resources become available for workload deployment with fine-tuning capabilities
 
 #### 6. Workload Deployment (FLARE)
 
@@ -518,7 +551,7 @@ FLARE automatically generates and deploys the fine-tuning workload:
 {
   "intent_id": "intent-finetuning-2024-01-15-001",
   "status": "running",
-  "progress": "60%",
+  "gpu_utilization": "60%",
   "estimated_completion": "2.1 hours remaining",
   "gpu": "RTX 4080 Mobile (12Gi)",
   "location": "Netherlands",
@@ -551,14 +584,14 @@ User submits high-performance computing intent to FLARE:
 
 ```bash
 # User submits HPC intent via FLARE API
-curl -X POST https://flare-api.example.com/api/v1/intents \
+curl -X POST https://flare-api.example.com/intents \
   -H "Authorization: Bearer $USER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "intent": {
       "objective": "Performance_Maximization",
       "workload": {
-        "type": "job",
+        "type": "batch",
         "name": "molecular-dynamics-simulation",
         "image": "gromacs/gromacs:2023.3-cuda",
         "commands": [
@@ -572,9 +605,15 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
           "gpu": {
             "model": "nvidia-a100",
             "count": 8,
-            "memory": "40Gi",
+            "memory_min": "40Gi",
             "interconnect": "nvlink"
           }
+        },
+        "batch": {
+          "parallel_tasks": 1,
+          "max_retries": 2,
+          "timeout": "24h",
+          "completion_policy": "All"
         }
       },
       "constraints": {
@@ -592,13 +631,13 @@ Response
   "intent_id": "intent-hpc-2024-01-15-001",
   "status": "pending",
   "estimated_completion_time": "12 hours",
-  "eta_seconds": 450
+  "estimated_start_time": "2024-01-15T14:37:30Z"
 }
 ```
 
 #### 2. FLARE Intent Processing (Automated)
 
-FLARE automatically translates the user intent into technical specifications and creates a GPU-aware Solver:
+FLARE automatically translates the user intent into technical specifications for GPU resource discovery:
 
 ```yaml
 metadata:
@@ -632,11 +671,11 @@ spec:
   establishPeering: true
 ```
 
-#### 3. GPU Discovery and Filtering (FLUIDOS Enhanced)
+#### 3. GPU Discovery and Filtering
 
-FLUIDOS automatically discovers and filters HPC GPU resources based on Solver requirements:
+FLARE automatically discovers and filters HPC GPU resources:
 
-**What FLUIDOS does automatically**:
+**What FLARE does automatically**:
 
 1. **HPC Flavor discovery across clusters** - Scans all federated providers for high-performance configurations
 2. **Native multi-GPU filtering** - Applies 8-GPU count and NVLink requirements
@@ -659,15 +698,15 @@ FLUIDOS automatically selects the first available PeeringCandidate and creates a
 - In this case: A100 8x40Gi (€85/hour) is selected
 - Performance optimization prioritizes multi-GPU configurations
 
-#### 5. Remote Peering and Allocation (Liqo)
+#### 5. Remote Resource Allocation
 
-FLUIDOS triggers Liqo to establish peering and create virtual node:
+FLARE establishes connection to the selected provider and provisions resources:
 
 **What happens automatically**:
 
-1. FLUIDOS creates Allocation resource for 8-GPU HPC configuration
-2. Liqo establishes secure tunnel to provider
-3. Virtual node appears in consumer cluster with HPC capabilities
+1. FLARE creates resource allocation for 8-GPU HPC configuration
+2. FLARE establishes secure connection to provider
+3. GPU resources become available for workload deployment with HPC capabilities
 
 #### 6. Workload Deployment (FLARE)
 
@@ -686,7 +725,7 @@ FLARE automatically generates and deploys the HPC workload:
 {
   "intent_id": "intent-hpc-2024-01-15-001",
   "status": "running",
-  "progress": "25%",
+  "gpu_utilization": "25%",
   "estimated_completion": "9 hours remaining",
   "gpu": "A100 8x40Gi NVLink",
   "location": "Germany", 
@@ -722,7 +761,7 @@ User submits low-latency video analytics intent to FLARE:
 
 ```bash
 # User submits video processing intent via FLARE API
-curl -X POST https://flare-api.example.com/api/v1/intents \
+curl -X POST https://flare-api.example.com/intents \
   -H "Authorization: Bearer $USER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -747,7 +786,7 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
           "gpu": {
             "model": "nvidia-rtx-4080",
             "count": 1,
-            "memory": "12Gi",
+            "memory_min": "12Gi",
             "tier": "gaming"
           }
         }
@@ -767,13 +806,13 @@ Response
   "intent_id": "intent-video-2024-01-15-001",
   "status": "pending",
   "estimated_latency": "12ms",
-  "eta_seconds": 180
+  "estimated_start_time": "2024-01-15T14:33:00Z"
 }
 ```
 
 #### 2. FLARE Intent Processing (Automated)
 
-FLARE automatically translates the user intent into technical specifications and creates a GPU-aware Solver:
+FLARE automatically translates the user intent into technical specifications for GPU resource discovery:
 
 ```yaml
 metadata:
@@ -807,11 +846,11 @@ spec:
   establishPeering: true
 ```
 
-#### 3. GPU Discovery and Filtering (FLUIDOS Enhanced)
+#### 3. GPU Discovery and Filtering
 
-FLUIDOS automatically discovers and filters edge GPU resources based on Solver requirements:
+FLARE automatically discovers and filters edge GPU resources:
 
-**What FLUIDOS does automatically**:
+**What FLARE does automatically**:
 
 1. **Edge Flavor discovery across clusters** - Scans all federated providers for low-latency edge configurations
 2. **Native video processing filtering** - Applies GPU memory and video decode capabilities
@@ -834,15 +873,15 @@ FLUIDOS automatically selects the first available PeeringCandidate and creates a
 - In this case: RTX 4080 (€0.45/hour, 8ms) is selected
 - Latency optimization prioritizes lowest-latency options
 
-#### 5. Remote Peering and Allocation (Liqo)
+#### 5. Remote Resource Allocation
 
-FLUIDOS triggers Liqo to establish peering and create virtual node:
+FLARE establishes connection to the selected provider and provisions resources:
 
 **What happens automatically**:
 
-1. FLUIDOS creates Allocation resource for edge GPU configuration
-2. Liqo establishes secure tunnel to edge provider
-3. Virtual node appears in consumer cluster with edge capabilities
+1. FLARE creates resource allocation for edge GPU configuration
+2. FLARE establishes secure connection to edge provider
+3. GPU resources become available for workload deployment with edge capabilities
 
 #### 6. Workload Deployment (FLARE)
 
@@ -861,7 +900,7 @@ FLARE automatically generates and deploys the video analytics workload:
 {
   "intent_id": "intent-video-2024-01-15-001",
   "status": "completed",
-  "endpoint": "https://video-analytics.edge.example.com",
+  "workload_url": "https://video-analytics.edge.example.com",
   "actual_latency": "8ms",
   "gpu": "RTX 4080 (16Gi)",
   "location": "Frankfurt Edge",
@@ -895,7 +934,7 @@ FLARE automatically generates and deploys the video analytics workload:
 #### 1. User Intent Submission
 
 ```bash
-curl -X POST https://flare-api.example.com/api/v1/intents \
+curl -X POST https://flare-api.example.com/intents \
   -H "Authorization: Bearer $USER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -925,14 +964,14 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
           "gpu": {
             "model": "nvidia-t4",
             "count": 1,
-            "memory": "4Gi",
+            "memory_min": "4Gi",
             "tier": "inference"
           }
         }
       },
       "constraints": {
         "max_hourly_cost": "2 EUR",
-        "location": "edge",
+        "location": "EU",
         "max_latency_ms": 50
       }
     }
@@ -945,14 +984,16 @@ Response
 {
   "intent_id": "intent-edge-inference-2024-01-15-001",
   "status": "pending",
-  "estimated_cost": "0.25 EUR/hour",
-  "eta_seconds": 240
+  "estimated_cost": "0.25",
+  "currency": "EUR", 
+  "billing_period": "hourly",
+  "estimated_start_time": "2024-01-15T14:34:00Z"
 }
 ```
 
 #### 2. FLARE Intent Processing (Automated)
 
-FLARE automatically translates the user intent into technical specifications and creates a GPU-aware Solver:
+FLARE automatically translates the user intent into technical specifications for GPU resource discovery:
 
 ```yaml
 metadata:
@@ -986,11 +1027,11 @@ spec:
   establishPeering: true
 ```
 
-#### 3. GPU Discovery and Filtering (FLUIDOS Enhanced)
+#### 3. GPU Discovery and Filtering
 
-FLUIDOS automatically discovers and filters edge inference resources based on Solver requirements:
+FLARE automatically discovers and filters edge inference resources:
 
-**What FLUIDOS does automatically**:
+**What FLARE does automatically**:
 
 1. **Edge inference Flavor discovery** - Scans all federated providers for inference-optimized configurations
 2. **Native power efficiency filtering** - Applies inference tier and memory requirements
@@ -1013,15 +1054,15 @@ FLUIDOS automatically selects the first available PeeringCandidate and creates a
 - In this case: T4 (€0.25/hour) is selected
 - Energy efficiency optimization prioritizes inference-optimized GPUs
 
-#### 5. Remote Peering and Allocation (Liqo)
+#### 5. Remote Resource Allocation
 
-FLUIDOS triggers Liqo to establish peering and create virtual node:
+FLARE establishes connection to the selected provider and provisions resources:
 
 **What happens automatically**:
 
-1. FLUIDOS creates Allocation resource for edge inference configuration
-2. Liqo establishes secure tunnel to edge provider
-3. Virtual node appears in consumer cluster with inference capabilities
+1. FLARE creates resource allocation for edge inference configuration
+2. FLARE establishes secure connection to edge provider
+3. GPU resources become available for workload deployment with inference capabilities
 
 #### 6. Workload Deployment (FLARE)
 
@@ -1040,7 +1081,7 @@ FLARE automatically generates and deploys the edge inference workload:
 {
   "intent_id": "intent-edge-inference-2024-01-15-001",
   "status": "completed",
-  "endpoint": "https://iot-inference.edge.example.com",
+  "workload_url": "https://iot-inference.edge.example.com",
   "actual_cost": "0.25 EUR/hour",
   "gpu": "T4 (16Gi)",
   "location": "Edge Location A",
@@ -1073,7 +1114,7 @@ FLARE automatically generates and deploys the edge inference workload:
 #### 1. User Intent Submission
 
 ```bash
-curl -X POST https://flare-api.example.com/api/v1/intents \
+curl -X POST https://flare-api.example.com/intents \
   -H "Authorization: Bearer $USER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1089,7 +1130,7 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
           "gpu": {
             "model": "nvidia-rtx-4080",
             "count": 4,
-            "memory": "16Gi"
+            "memory_min": "16Gi"
           }
         },
         "batch": {
@@ -1114,13 +1155,13 @@ Response
   "intent_id": "intent-batch-2024-01-15-001",
   "status": "pending",
   "estimated_completion_time": "10 hours",
-  "eta_seconds": 360
+  "estimated_start_time": "2024-01-15T14:36:00Z"
 }
 ```
 
 #### 2. FLARE Intent Processing (Automated)
 
-FLARE automatically translates the user intent into technical specifications and creates a GPU-aware Solver:
+FLARE automatically translates the user intent into technical specifications for GPU resource discovery:
 
 ```yaml
 metadata:
@@ -1150,11 +1191,11 @@ spec:
   establishPeering: true
 ```
 
-#### 3. GPU Discovery and Filtering (FLUIDOS Enhanced)
+#### 3. GPU Discovery and Filtering
 
-FLUIDOS automatically discovers and filters batch processing resources based on Solver requirements:
+FLARE automatically discovers and filters batch processing resources:
 
-**What FLUIDOS does automatically**:
+**What FLARE does automatically**:
 
 1. **Batch processing Flavor discovery** - Scans all federated providers for cost-effective configurations
 2. **Native cost filtering** - Applies budget constraints and preemptible pricing
@@ -1177,15 +1218,15 @@ FLUIDOS automatically selects the first available PeeringCandidate and creates a
 - In this case: RTX 4080 (€0.35/hour) is selected
 - Cost optimization prioritizes most affordable option
 
-#### 5. Remote Peering and Allocation (Liqo)
+#### 5. Remote Resource Allocation
 
-FLUIDOS triggers Liqo to establish peering and create virtual node:
+FLARE establishes connection to the selected provider and provisions resources:
 
 **What happens automatically**:
 
-1. FLUIDOS creates Allocation resource for batch processing configuration
-2. Liqo establishes secure tunnel to provider
-3. Virtual node appears in consumer cluster with batch capabilities
+1. FLARE creates resource allocation for batch processing configuration
+2. FLARE establishes secure connection to provider
+3. GPU resources become available for workload deployment with batch capabilities
 
 #### 6. Workload Deployment (FLARE)
 
@@ -1204,7 +1245,7 @@ FLARE automatically generates and deploys the batch processing workload:
 {
   "intent_id": "intent-batch-2024-01-15-001",
   "status": "running",
-  "progress": "30%",
+  "gpu_utilization": "30%",
   "estimated_completion": "8 hours remaining",
   "gpu": "RTX 4080 (16Gi) 4x nodes",
   "location": "Germany",
@@ -1236,7 +1277,7 @@ FLARE automatically generates and deploys the batch processing workload:
 #### 1. User Intent Submission
 
 ```bash
-curl -X POST https://flare-api.example.com/api/v1/intents \
+curl -X POST https://flare-api.example.com/intents \
   -H "Authorization: Bearer $TENANT_A_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1252,7 +1293,7 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
           "gpu": {
             "model": "nvidia-rtx-4090",
             "count": 2,
-            "memory": "16Gi"
+            "memory_min": "16Gi"
           }
         }
       },
@@ -1269,14 +1310,16 @@ Response
 {
   "intent_id": "intent-multitenant-2024-01-15-001",
   "status": "pending",
-  "estimated_cost": "1.20 EUR/hour",
-  "eta_seconds": 300
+  "estimated_cost": "1.20",
+  "currency": "EUR",
+  "billing_period": "hourly", 
+  "estimated_start_time": "2024-01-15T14:35:00Z"
 }
 ```
 
 #### 2. FLARE Intent Processing (Automated)
 
-FLARE automatically translates the user intent into technical specifications and creates a GPU-aware Solver:
+FLARE automatically translates the user intent into technical specifications for GPU resource discovery:
 
 ```yaml
 metadata:
@@ -1306,11 +1349,11 @@ spec:
   establishPeering: true
 ```
 
-#### 3. GPU Discovery and Filtering (FLUIDOS Enhanced)
+#### 3. GPU Discovery and Filtering
 
-FLUIDOS automatically discovers and filters multi-tenant GPU resources based on Solver requirements:
+FLARE automatically discovers and filters multi-tenant GPU resources:
 
-**What FLUIDOS does automatically**:
+**What FLARE does automatically**:
 
 1. **Multi-tenant Flavor discovery** - Scans all federated providers for tenant isolation capabilities
 2. **Native isolation filtering** - Applies strict tenant separation requirements
@@ -1333,15 +1376,15 @@ FLUIDOS automatically selects the first available PeeringCandidate and creates a
 - In this case: RTX 4090 2x (€1.20/hour) is selected
 - Multi-tenant optimization prioritizes isolation capabilities
 
-#### 5. Remote Peering and Allocation (Liqo)
+#### 5. Remote Resource Allocation
 
-FLUIDOS triggers Liqo to establish peering and create virtual node:
+FLARE establishes connection to the selected provider and provisions resources:
 
 **What happens automatically**:
 
-1. FLUIDOS creates Allocation resource for multi-tenant configuration
-2. Liqo establishes secure tunnel to provider with isolation
-3. Virtual node appears in consumer cluster with tenant separation
+1. FLARE creates resource allocation for multi-tenant configuration
+2. FLARE establishes secure connection to provider with isolation
+3. GPU resources become available for workload deployment with tenant separation
 
 #### 6. Workload Deployment (FLARE)
 
@@ -1360,7 +1403,7 @@ FLARE automatically generates and deploys the multi-tenant workload:
 {
   "intent_id": "intent-multitenant-2024-01-15-001",
   "status": "completed",
-  "endpoint": "https://tenant-a.flare.example.com",
+  "workload_url": "https://tenant-a.flare.example.com",
   "gpu": "RTX 4090 (24Gi) 2x nodes",
   "location": "Germany",
   "tenant_metrics": {
@@ -1391,7 +1434,7 @@ FLARE automatically generates and deploys the multi-tenant workload:
 #### 1. User Intent Submission
 
 ```bash
-curl -X POST https://flare-api.example.com/api/v1/intents \
+curl -X POST https://flare-api.example.com/intents \
   -H "Authorization: Bearer $USER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1407,7 +1450,7 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
           "gpu": {
             "model": "nvidia-rtx-4080",
             "count": 1,
-            "memory": "16Gi"
+            "memory_min": "16Gi"
           }
         },
         "scaling": {
@@ -1416,9 +1459,9 @@ curl -X POST https://flare-api.example.com/api/v1/intents \
         }
       },
       "constraints": {
-        "regions": ["EU", "US-East", "Asia-Pacific"],
-        "max_latency_between_regions": 200,
-        "max_total_cost": "25 EUR/hour"
+        "location": "EU",
+        "max_latency_ms": 200,
+        "max_hourly_cost": "25 EUR"
       }
     }
   }'
@@ -1430,14 +1473,16 @@ Response
 {
   "intent_id": "intent-distributed-2024-01-15-001",
   "status": "pending",
-  "estimated_cost": "4.00 EUR/hour",
-  "eta_seconds": 450
+  "estimated_cost": "4.00",
+  "currency": "EUR",
+  "billing_period": "hourly",
+  "estimated_start_time": "2024-01-15T14:37:30Z"
 }
 ```
 
 #### 2. FLARE Intent Processing (Automated)
 
-FLARE automatically translates the user intent into technical specifications and creates multiple GPU-aware Solvers for distributed deployment:
+FLARE automatically translates the user intent into technical specifications for distributed GPU resource discovery:
 
 ```yaml
 metadata:
@@ -1471,11 +1516,11 @@ spec:
   establishPeering: true
 ```
 
-#### 3. GPU Discovery and Filtering (FLUIDOS Enhanced)
+#### 3. GPU Discovery and Filtering
 
-FLUIDOS automatically discovers and filters distributed GPU resources based on Solver requirements:
+FLARE automatically discovers and filters distributed GPU resources:
 
-**What FLUIDOS does automatically**:
+**What FLARE does automatically**:
 
 1. **Multi-region Flavor discovery** - Scans all federated providers across specified regions
 2. **Native geographic filtering** - Applies region-specific constraints
@@ -1498,15 +1543,15 @@ FLUIDOS automatically creates multiple contracts across regions:
 - EU: RTX 4080 (€0.75/hour), US-East: RTX 4090 (€0.85/hour), Asia-Pacific: A100 (€2.40/hour)
 - Geographic distribution optimization ensures global coverage
 
-#### 5. Remote Peering and Allocation (Liqo)
+#### 5. Remote Resource Allocation
 
-FLUIDOS triggers Liqo to establish multi-region peering:
+FLARE establishes multi-region connections:
 
 **What happens automatically**:
 
-1. FLUIDOS creates Allocation resources for each region
-2. Liqo establishes secure tunnels to all three provider regions
-3. Virtual nodes appear in consumer cluster representing each region
+1. FLARE creates resource allocations for each region
+2. FLARE establishes secure connections to all three provider regions
+3. GPU resources become available in each region for workload deployment
 
 #### 6. Workload Deployment (FLARE)
 
@@ -1525,48 +1570,281 @@ FLARE automatically generates and deploys distributed workloads across regions:
 {
   "intent_id": "intent-distributed-2024-01-15-001",
   "status": "completed",
-  "total_cost": "4.00 EUR/hour",
+  "current_cost": "4.00 EUR/hour",
   "deployments": [
     {
       "region": "EU",
       "gpu": "RTX 4080 (16Gi)",
       "location": "Germany", 
-      "endpoint": "https://eu.global-ml.example.com",
+      "workload_url": "https://eu.global-ml.example.com",
       "latency_to_coordinator": "45ms"
     },
     {
       "region": "US-East", 
       "gpu": "RTX 4090 (24Gi)",
       "location": "Virginia",
-      "endpoint": "https://us.global-ml.example.com", 
+      "workload_url": "https://us.global-ml.example.com", 
       "latency_to_coordinator": "120ms"
     },
     {
       "region": "Asia-Pacific",
       "gpu": "A100 (40Gi)", 
       "location": "Singapore",
-      "endpoint": "https://ap.global-ml.example.com",
+      "workload_url": "https://ap.global-ml.example.com",
       "latency_to_coordinator": "180ms"
     }
   ]
 }
 ```
 
+## 10. Cost Optimization Scenarios
+
+This section demonstrates FLARE's cost optimization capabilities through intent-based GPU allocation and multi-provider federation. FLARE enables significant cost savings through automated provider selection, spot instance utilization, and intelligent resource matching.
+
+> **Note on Pricing**: The cost figures used in these scenarios are illustrative examples for demonstration purposes only. They do not reflect actual current GPU market pricing, which varies significantly by provider, region, availability, and market conditions. Real-world cost savings will depend on specific federated provider configurations, market pricing, and workload characteristics.
+
+### Cost Optimization Capabilities
+
+#### 1. Intent-Based Cost Optimization
+
+FLARE's `Cost_Minimization` objective automatically prioritizes lowest-cost resources that meet workload requirements:
+
+```json
+{
+  "objective": "Cost_Minimization"
+}
+```
+
+When specified, FLARE searches the entire federated provider pool and selects the most cost-effective option without requiring user knowledge of provider pricing.
+
+#### 2. Multi-Provider Resource Discovery
+
+FLARE automatically searches across all federated providers unless specifically constrained:
+
+```json
+{
+  "constraints": {
+    "location": "EU"  // Searches all EU providers
+    // No specific providers - enables cross-provider optimization
+  }
+}
+```
+
+This enables automatic provider arbitrage, leveraging competitive pricing across several GPU providers.
+
+#### 3. Spot Instance Integration
+
+For fault-tolerant workloads, FLARE can utilize spot/preemptible instances across the federation:
+
+```json
+{
+  "constraints": {
+    "preemptible": true
+  }
+}
+```
+
+Spot instances typically offer 60-80% discounts versus on-demand pricing, providing significant cost savings for compatible workloads.
+
+### Cost Optimization Scenarios
+
+#### Scenario A: Multi-Provider Training Workload
+
+**Business Need**: Machine learning model training with cost optimization priority
+**Workload Type**: Batch processing with checkpointing support
+**Cost Savings**: Provider arbitrage + spot instances + tier optimization
+
+**User Intent**:
+```bash
+curl -X POST https://flare-api.example.com/intents \
+  -H "Authorization: Bearer $USER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "intent": {
+      "objective": "Cost_Minimization",
+      "workload": {
+        "type": "batch",
+        "name": "ml-training-cost-optimized",
+        "image": "pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel",
+        "commands": [
+          "python3 train.py --model resnet50 --epochs 100 --checkpoint-freq 10"
+        ],
+        "resources": {
+          "gpu": {
+            "memory_min": "24Gi",
+            "tier": "gaming"
+          }
+        },
+        "batch": {
+          "parallel_tasks": 1,
+          "max_retries": 3,
+          "timeout": "10h",
+          "completion_policy": "All"
+        }
+      },
+      "constraints": {
+        "preemptible": true,
+        "max_hourly_cost": "6 EUR",
+        "location": "EU"
+      }
+    }
+  }'
+```
+
+**FLARE Optimization Process**:
+
+1. Searches all EU providers for gaming-tier GPUs with 24Gi+ memory
+2. Prioritizes spot instances when available
+3. Selects cheapest option meeting requirements
+4. Enables automatic restart on spot interruption
+
+**Cost Analysis**:
+
+- **Traditional approach**: Premium provider, H100 on-demand = €8.00/hour
+- **FLARE optimized**: Multi-provider gaming GPU = €6.00/hour
+- **Cost savings**: 25% reduction through multi-provider optimization
+
+#### Scenario B: Batch Processing with Flexible Requirements
+
+**Business Need**: Data processing pipeline with budget constraints
+**Workload Type**: Parallel processing
+**Cost Savings**: Cross-provider selection + budget optimization
+
+**User Intent**:
+```bash
+curl -X POST https://flare-api.example.com/intents \
+  -H "Authorization: Bearer $USER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "intent": {
+      "objective": "Cost_Minimization",
+      "workload": {
+        "type": "batch",
+        "name": "data-processing-batch",
+        "image": "apache/spark:3.4.0-gpu",
+        "resources": {
+          "gpu": {
+            "model": "any",
+            "tier": "standard",
+            "count": 1
+          }
+        },
+        "batch": {
+          "parallel_tasks": 4,
+          "timeout": "4h"
+        }
+      },
+      "constraints": {
+        "max_total_cost": "100 EUR",
+        "preemptible": true
+      }
+    }
+  }'
+```
+
+**FLARE Optimization Process**:
+
+1. Searches federation for any GPU meeting basic requirements
+2. Utilizes spot pricing across multiple providers
+3. Optimizes for total cost within €100 budget
+4. Distributes work across cheapest available resources
+
+**Cost Analysis**:
+
+- **Traditional approach**: Single provider, fixed instances = €5.50/hour
+- **FLARE optimized**: Multi-provider spot mix = €4.20/hour
+- **Cost savings**: 24% reduction through automated optimization
+
+#### Scenario C: Development Environment with Cost Constraints
+
+**Business Need**: Interactive development with moderate GPU requirements
+**Workload Type**: Long-running development service
+**Cost Savings**: GPU tier optimization + budget enforcement
+
+**User Intent**:
+```bash
+curl -X POST https://flare-api.example.com/intents \
+  -H "Authorization: Bearer $USER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "intent": {
+      "objective": "Cost_Minimization",
+      "workload": {
+        "type": "service",
+        "name": "dev-environment",
+        "image": "jupyter/tensorflow-notebook:latest",
+        "ports": [
+          {
+            "port": 8888,
+            "expose": true
+          }
+        ],
+        "resources": {
+          "gpu": {
+            "memory_min": "16Gi",
+            "tier": "gaming"
+          }
+        }
+      },
+      "constraints": {
+        "max_hourly_cost": "2.50 EUR",
+        "location": "EU"
+      }
+    }
+  }'
+```
+
+**FLARE Optimization Process**:
+
+1. Searches EU providers for gaming-tier GPUs with 16Gi+ memory
+2. Considers RTX 30/40 series alternatives to data center GPUs
+3. Finds lowest-cost option within €2.50/hour budget
+4. Provides development-appropriate GPU at optimal price point
+
+**Cost Analysis**:
+- **Traditional approach**: Premium GPU selection = €3.20/hour
+- **FLARE optimized**: Gaming GPU selection = €2.40/hour
+- **Cost savings**: 25% reduction through tier optimization
+
+### Cost Savings Analysis
+
+#### Provider Arbitrage Benefits
+
+Cloud providers typically have 10-20% pricing variations for equivalent resources due to:
+
+- Different pricing models and discount structures
+- Regional cost variations
+- Competition-based pricing strategies
+- Operational efficiency differences
+
+FLARE automatically identifies and selects the lowest-cost provider within the federation, eliminating the need for manual price comparison.
+
+#### Spot Instance Utilization
+
+Spot/preemptible instances offer significant discounts, typical 60-80% off on-demand pricing. FLARE enables spot instance usage across federated providers with simple configuration, providing substantial savings for fault-tolerant workloads.
+
+#### GPU Tier Optimization
+
+Different GPU tiers offer varying price/performance ratios:
+
+- Gaming GPUs: Often 20-30% cheaper than premium data center GPUs
+- Standard tiers: 15-25% cost reduction with balanced performance
+- Inference-optimized: Cost-effective for specific workload types
+
+FLARE matches workload requirements to optimal GPU tier based on cost objective, balancing performance needs with budget constraints.
+
+#### Resource Right-Sizing
+
+FLARE's intent-based allocation eliminates common over-provisioning by:
+
+- Matching exact memory and performance requirements
+- Avoiding fixed instance type limitations
+- Reducing waste from conservative resource estimates
+
+This typically results in 10-25% savings through elimination of unused resources.
+
 ## Summary
 
-These use cases demonstrate FLARE's versatility across different application domains:
+These use cases demonstrate FLARE's ability to abstract complex GPU federation workflows into simple, intent-based interactions suitable for users without deep Kubernetes expertise.
 
-- **Cost Optimization**: AI inference, fine-tuning, batch processing
-- **Performance Maximization**: AI training, HPC simulations  
-- **Latency Minimization**: Video analytics, edge inference
-- **Specialized Requirements**: Multi-tenancy, geographic distribution
-
-Each scenario follows the same automated pattern:
-
-1. **User Intent Submission** - Simple API call
-2. **FLARE Processing** - Automatic translation to technical specifications
-3. **FLUIDOS Discovery** - GPU resource discovery and filtering
-4. **Resource Allocation** - Contract creation and peering
-5. **Workload Deployment** - Automated deployment and monitoring
-
-This demonstrates FLARE's ability to abstract complex GPU federation workflows into simple, intent-based interactions suitable for users without deep Kubernetes expertise.
+The cost optimization is achieved through FLARE's intent-based approach, where users specify their primary objective (cost minimization) and FLARE handles the technical complexity of finding the most cost-effective solution across the federated provider ecosystem.
