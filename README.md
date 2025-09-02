@@ -125,12 +125,6 @@
 - [AMD-Specific Extensions](docs/AMD_GPU_Labels_Mapping.md#amd-specific-extensions)
 - [Node Selection](docs/AMD_GPU_Labels_Mapping.md#node-selection)
 
-#### [Efficient GPU Management](docs/FLARE_placeholder.md)
-- [Introduction](docs/FLARE_placeholder.md#introduction)
-- [Scenario and Architecture](docs/FLARE_placeholder.md#scenario-and-architecture)
-- [Scheduling Algorithm](docs/FLARE_placeholder.md#scheduling-algorithm)
-- [Performance Evaluation](docs/FLARE_placeholder.md#performance-evaluation)
-
 ### Operations & Administration
 
 #### [Admin Guide](docs/FLARE_Admin_Guide.md)

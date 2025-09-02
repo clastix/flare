@@ -174,39 +174,160 @@ watch -n 5 'kubectl get nodes -o custom-columns=NAME:.metadata.name,GPU:.status.
 
 For this FLARE intent demo, we use memory requirements to naturally select the appropriate GPU type:
 
-- `memory: "70Gi"` - This requirement automatically selects H100s (80Gi) while excluding A6000s (48Gi)
-- `count: 1` - Request a single GPU (we have 2 per node)
+```bash
+### Step 5: Annotate Provider Nodes for FLARE
 
 ```bash
-# Basic GPU annotations for Provider 1 - H100 nodes
+# Comprehensive annotations for Provider 1 - Premium H100 Cloud
 export KUBECONFIG=fluidos-provider-1-config
 
-# Worker 1: H100 with 80Gi memory per GPU
+# Worker 1: H100 with full specifications (dedicated, non-interruptible)
 kubectl annotate node fluidos-provider-1-worker \
+  gpu.fluidos.eu/vendor="nvidia" \
   gpu.fluidos.eu/model="nvidia-h100" \
-  gpu.fluidos.eu/count="2" \
-  gpu.fluidos.eu/memory="80Gi"
+  gpu.fluidos.eu/count="4" \
+  gpu.fluidos.eu/memory-per-gpu="80Gi" \
+  gpu.fluidos.eu/tier="premium" \
+  gpu.fluidos.eu/architecture="hopper" \
+  gpu.fluidos.eu/cores="16896" \
+  gpu.fluidos.eu/compute-capability="9.0" \
+  gpu.fluidos.eu/clock-speed="1.98G" \
+  gpu.fluidos.eu/fp32-tflops="83.0" \
+  gpu.fluidos.eu/interconnect="nvlink" \
+  gpu.fluidos.eu/interconnect-bandwidth-gbps="900" \
+  gpu.fluidos.eu/topology="nvswitch" \
+  gpu.fluidos.eu/multi-gpu-efficiency="0.95" \
+  gpu.fluidos.eu/sharing-capable="true" \
+  gpu.fluidos.eu/sharing-strategy="mig" \
+  gpu.fluidos.eu/dedicated="true" \
+  gpu.fluidos.eu/interruptible="false" \
+  location.fluidos.eu/region="eu-west-1" \
+  location.fluidos.eu/zone="zone-a" \
+  cost.fluidos.eu/hourly-rate="4.5" \
+  cost.fluidos.eu/currency="EUR" \
+  workload.fluidos.eu/training-score="0.98" \
+  workload.fluidos.eu/inference-score="0.95" \
+  workload.fluidos.eu/hpc-score="0.99" \
+  workload.fluidos.eu/graphics-score="0.30" \
+  network.fluidos.eu/bandwidth-gbps="100" \
+  network.fluidos.eu/latency-ms="1" \
+  network.fluidos.eu/tier="premium" \
+  provider.fluidos.eu/name="cloud-provider-1" \
+  provider.fluidos.eu/preemptible="false"
 
-# Worker 2: H100 with 80Gi memory per GPU  
+# Worker 2: H100 with spot/preemptible configuration (lower cost)
 kubectl annotate node fluidos-provider-1-worker2 \
+  gpu.fluidos.eu/vendor="nvidia" \
   gpu.fluidos.eu/model="nvidia-h100" \
-  gpu.fluidos.eu/count="2" \
-  gpu.fluidos.eu/memory="80Gi"
+  gpu.fluidos.eu/count="4" \
+  gpu.fluidos.eu/memory-per-gpu="80Gi" \
+  gpu.fluidos.eu/tier="premium" \
+  gpu.fluidos.eu/architecture="hopper" \
+  gpu.fluidos.eu/cores="16896" \
+  gpu.fluidos.eu/compute-capability="9.0" \
+  gpu.fluidos.eu/clock-speed="1.98G" \
+  gpu.fluidos.eu/fp32-tflops="83.0" \
+  gpu.fluidos.eu/interconnect="nvlink" \
+  gpu.fluidos.eu/interconnect-bandwidth-gbps="900" \
+  gpu.fluidos.eu/topology="nvswitch" \
+  gpu.fluidos.eu/multi-gpu-efficiency="0.95" \
+  gpu.fluidos.eu/sharing-capable="true" \
+  gpu.fluidos.eu/sharing-strategy="mig" \
+  gpu.fluidos.eu/dedicated="false" \
+  gpu.fluidos.eu/interruptible="true" \
+  location.fluidos.eu/region="eu-west-1" \
+  location.fluidos.eu/zone="zone-b" \
+  cost.fluidos.eu/hourly-rate="1.8" \
+  cost.fluidos.eu/currency="EUR" \
+  workload.fluidos.eu/training-score="0.98" \
+  workload.fluidos.eu/inference-score="0.95" \
+  workload.fluidos.eu/hpc-score="0.99" \
+  workload.fluidos.eu/graphics-score="0.30" \
+  network.fluidos.eu/bandwidth-gbps="100" \
+  network.fluidos.eu/latency-ms="1" \
+  network.fluidos.eu/tier="premium" \
+  provider.fluidos.eu/name="cloud-provider-1" \
+  provider.fluidos.eu/preemptible="true"
 
-# Basic GPU annotations for Provider 2 - A6000 nodes
+# Comprehensive annotations for Provider 2 - Standard A6000 Cloud  
 export KUBECONFIG=fluidos-provider-2-config
 
-# Worker 1: A6000 with 48Gi memory per GPU
+# Worker 1: A6000 for professional workloads (dedicated)
 kubectl annotate node fluidos-provider-2-worker \
+  gpu.fluidos.eu/vendor="nvidia" \
   gpu.fluidos.eu/model="nvidia-a6000" \
-  gpu.fluidos.eu/count="2" \
-  gpu.fluidos.eu/memory="48Gi"
+  gpu.fluidos.eu/count="8" \
+  gpu.fluidos.eu/memory-per-gpu="48Gi" \
+  gpu.fluidos.eu/tier="standard" \
+  gpu.fluidos.eu/architecture="ampere" \
+  gpu.fluidos.eu/cores="10752" \
+  gpu.fluidos.eu/compute-capability="8.6" \
+  gpu.fluidos.eu/clock-speed="1.80G" \
+  gpu.fluidos.eu/fp32-tflops="38.7" \
+  gpu.fluidos.eu/interconnect="nvlink" \
+  gpu.fluidos.eu/interconnect-bandwidth-gbps="600" \
+  gpu.fluidos.eu/topology="ring" \
+  gpu.fluidos.eu/multi-gpu-efficiency="0.85" \
+  gpu.fluidos.eu/sharing-capable="false" \
+  gpu.fluidos.eu/sharing-strategy="none" \
+  gpu.fluidos.eu/dedicated="true" \
+  gpu.fluidos.eu/interruptible="false" \
+  location.fluidos.eu/region="us-east-1" \
+  location.fluidos.eu/zone="zone-a" \
+  cost.fluidos.eu/hourly-rate="2.1" \
+  cost.fluidos.eu/currency="EUR" \
+  workload.fluidos.eu/training-score="0.85" \
+  workload.fluidos.eu/inference-score="0.90" \
+  workload.fluidos.eu/hpc-score="0.80" \
+  workload.fluidos.eu/graphics-score="0.95" \
+  network.fluidos.eu/bandwidth-gbps="25" \
+  network.fluidos.eu/latency-ms="5" \
+  network.fluidos.eu/tier="standard" \
+  provider.fluidos.eu/name="cloud-provider-2" \
+  provider.fluidos.eu/preemptible="false"
 
-# Worker 2: A6000 with 48Gi memory per GPU
+# Worker 2: A6000 with time-slicing for inference (interruptible)
 kubectl annotate node fluidos-provider-2-worker2 \
+  gpu.fluidos.eu/vendor="nvidia" \
   gpu.fluidos.eu/model="nvidia-a6000" \
-  gpu.fluidos.eu/count="2" \
-  gpu.fluidos.eu/memory="48Gi"
+  gpu.fluidos.eu/count="8" \
+  gpu.fluidos.eu/memory-per-gpu="48Gi" \
+  gpu.fluidos.eu/tier="standard" \
+  gpu.fluidos.eu/architecture="ampere" \
+  gpu.fluidos.eu/cores="10752" \
+  gpu.fluidos.eu/compute-capability="8.6" \
+  gpu.fluidos.eu/clock-speed="1.80G" \
+  gpu.fluidos.eu/fp32-tflops="38.7" \
+  gpu.fluidos.eu/interconnect="pcie" \
+  gpu.fluidos.eu/interconnect-bandwidth-gbps="64" \
+  gpu.fluidos.eu/topology="mesh" \
+  gpu.fluidos.eu/multi-gpu-efficiency="0.70" \
+  gpu.fluidos.eu/sharing-capable="true" \
+  gpu.fluidos.eu/sharing-strategy="time-slicing" \
+  gpu.fluidos.eu/dedicated="false" \
+  gpu.fluidos.eu/interruptible="true" \
+  location.fluidos.eu/region="us-east-1" \
+  location.fluidos.eu/zone="zone-b" \
+  cost.fluidos.eu/hourly-rate="0.8" \
+  cost.fluidos.eu/currency="EUR" \
+  workload.fluidos.eu/training-score="0.75" \
+  workload.fluidos.eu/inference-score="0.95" \
+  workload.fluidos.eu/hpc-score="0.70" \
+  workload.fluidos.eu/graphics-score="0.90" \
+  network.fluidos.eu/bandwidth-gbps="10" \
+  network.fluidos.eu/latency-ms="10" \
+  network.fluidos.eu/tier="basic" \
+  provider.fluidos.eu/name="cloud-provider-2" \
+  provider.fluidos.eu/preemptible="true"
+
+# Add GPU selector labels for all GPU nodes (for easy querying)
+export KUBECONFIG=fluidos-provider-1-config
+kubectl label node fluidos-provider-1-worker node.fluidos.eu/gpu="true"
+kubectl label node fluidos-provider-1-worker2 node.fluidos.eu/gpu="true"
+
+export KUBECONFIG=fluidos-provider-2-config
+kubectl label node fluidos-provider-2-worker node.fluidos.eu/gpu="true"
+kubectl label node fluidos-provider-2-worker2 node.fluidos.eu/gpu="true"
 
 # Add GPU selector labels for all GPU nodes (for easy querying)
 export KUBECONFIG=fluidos-provider-1-config
@@ -279,12 +400,24 @@ EOF
 
 # Following steps are expected to run in kind:
 # YMMV regarding container registry.
-#
+
+# Clone FLARE repository
+cd ~
+git clone https://github.com/clastix/flare
+cd flare
+
 # Build and load FLARE container images
 make load
 
 # Install FLARE API Server and controllers
+# make sure to have golang 1.21+ installed and configured
 make install
+
+# Verify FLARE components are running - you should see 2 pods running
+kubectl get pods -n flare-system
+NAME                              READY   STATUS    RESTARTS   AGE
+flare-operator-7848d4f65f-lzj58   1/1     Running   0          22s
+flare-server-6c4bd8dddd-sph6g     1/1     Running   0          22s
 
 # Generate a ServiceAccount token as `solar` Tenant to interact with the API
 cat <<EOF | kubectl apply -f -
@@ -333,15 +466,15 @@ EOF
 kubectl get svc | grep dashboard
 
 # Port-forward to access the dashboard locally
-kubectl port-forward service/frontend-service 8080:80 &
+kubectl port-forward service/frontend-service 8090:80 &
 
 # For WSL users: Access from Windows host browser
 # Use WSL IP address instead of localhost
-# kubectl port-forward service/frontend-service 8080:80 --address 0.0.0.0 &
+# kubectl port-forward service/frontend-service 8090:80 --address 0.0.0.0 &
 # kubectl port-forward service/backend-service 31000:3001 --address 0.0.0.0 &
-# Then access at http://WSL_IP:8080 (e.g., http://172.30.180.176:8080)
+# Then access at http://WSL_IP:8090 (e.g., http://172.30.180.176:8080)
 
-# Access dashboard at http://localhost:8080
+# Access dashboard at http://localhost:8090
 ```
 
 ### Step 9: Complete End-to-End FLARE GPU Workload Deployment
